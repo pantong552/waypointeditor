@@ -1454,11 +1454,27 @@ class WaypointMapApp {
     saveState() {
         // 1. 序列化圖形數據 (因為 Leaflet Layer 物件不能直接存入 JSON)
         const serializedShapes = this.shapes.map(s => {
-            return {
-                type: s.type,
-                // getLatLngs() 回傳圖形的坐標陣列
-                latlngs: s.layer.getLatLngs()
-            };
+            const shapeData = { type: s.type };
+
+            if (s.type === 'circle') {
+                // Circle: 儲存中心點和半徑
+                shapeData.center = s.layer.getLatLng();
+                shapeData.radius = s.layer.getRadius();
+            } else if (s.type === 'rectangle') {
+                // Rectangle: 儲存 bounds
+                const bounds = s.layer.getBounds();
+                shapeData.bounds = {
+                    north: bounds.getNorth(),
+                    south: bounds.getSouth(),
+                    east: bounds.getEast(),
+                    west: bounds.getWest()
+                };
+            } else {
+                // Polygon/Polyline: 使用 getLatLngs()
+                shapeData.latlngs = s.layer.getLatLngs();
+            }
+
+            return shapeData;
         });
 
         const state = {
@@ -1517,6 +1533,19 @@ class WaypointMapApp {
                     layer = L.polygon(shapeData.latlngs, { color: '#0d6efd' });
                 } else if (shapeData.type === 'polyline') {
                     layer = L.polyline(shapeData.latlngs, { color: '#0d6efd' });
+                } else if (shapeData.type === 'rectangle') {
+                    // Rectangle: 從 bounds 重建
+                    const bounds = L.latLngBounds(
+                        [shapeData.bounds.south, shapeData.bounds.west],
+                        [shapeData.bounds.north, shapeData.bounds.east]
+                    );
+                    layer = L.rectangle(bounds, { color: '#0d6efd' });
+                } else if (shapeData.type === 'circle') {
+                    // Circle: 從 center 和 radius 重建
+                    layer = L.circle(shapeData.center, {
+                        radius: shapeData.radius,
+                        color: '#0d6efd'
+                    });
                 }
 
                 if (layer) {

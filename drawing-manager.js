@@ -8,7 +8,7 @@ class DrawingManager {
         this.app = app; // Reference to WaypointMapApp
 
         // Layers
-        this.drawnItems = app.drawnItems; 
+        this.drawnItems = app.drawnItems;
         this.waypointsLayer = app.waypointsLayer;
         this.editHandlesLayer = new L.FeatureGroup().addTo(this.map);
 
@@ -19,7 +19,7 @@ class DrawingManager {
         this.tempLine = null;
         this.tempPoly = null;
         this.editingLayer = null;
-        
+
         // 防止事件衝突的旗標
         this.ignoreNextClick = false;
 
@@ -35,12 +35,24 @@ class DrawingManager {
             options: { position: 'topleft' },
             onAdd: () => {
                 const container = L.DomUtil.create('div', 'custom-draw-toolbar leaflet-bar');
-                
+
                 // Polygon Button
                 const polyBtn = L.DomUtil.create('button', 'custom-draw-btn', container);
                 polyBtn.innerHTML = '<i class="bi bi-pentagon"></i>';
                 polyBtn.title = 'Draw Polygon';
                 L.DomEvent.on(polyBtn, 'click', (e) => this.toggleMode('polygon', polyBtn, e));
+
+                // Square Button
+                const squareBtn = L.DomUtil.create('button', 'custom-draw-btn', container);
+                squareBtn.innerHTML = '<i class="bi bi-square"></i>';
+                squareBtn.title = 'Draw Square';
+                L.DomEvent.on(squareBtn, 'click', (e) => this.toggleMode('rectangle', squareBtn, e));
+
+                // Circle Button
+                const circleBtn = L.DomUtil.create('button', 'custom-draw-btn', container);
+                circleBtn.innerHTML = '<i class="bi bi-circle"></i>';
+                circleBtn.title = 'Draw Circle';
+                L.DomEvent.on(circleBtn, 'click', (e) => this.toggleMode('circle', circleBtn, e));
 
                 // Polyline Button
                 const lineBtn = L.DomUtil.create('button', 'custom-draw-btn', container);
@@ -55,7 +67,13 @@ class DrawingManager {
                 L.DomEvent.on(markerBtn, 'click', (e) => this.toggleMode('marker', markerBtn, e));
 
                 L.DomEvent.disableClickPropagation(container);
-                this.btns = { polygon: polyBtn, polyline: lineBtn, marker: markerBtn };
+                this.btns = {
+                    polygon: polyBtn,
+                    rectangle: squareBtn,
+                    circle: circleBtn,
+                    polyline: lineBtn,
+                    marker: markerBtn
+                };
                 return container;
             }
         });
@@ -70,7 +88,7 @@ class DrawingManager {
             L.DomEvent.stopPropagation(e);
             L.DomEvent.preventDefault(e);
         }
-        
+
         this.cancelDrawing();
         this.disableEdit();
 
@@ -89,8 +107,8 @@ class DrawingManager {
             if (btn) btn.classList.add('active'); // 安全檢查
             this.map.getContainer().style.cursor = 'crosshair';
             this.isDrawing = true;
-            
-            this.ignoreNextClick = true; 
+
+            this.ignoreNextClick = true;
             setTimeout(() => this.ignoreNextClick = false, 100);
         }
     }
@@ -100,8 +118,12 @@ class DrawingManager {
         this.drawingPoints = [];
         if (this.tempLine) this.map.removeLayer(this.tempLine);
         if (this.tempPoly) this.map.removeLayer(this.tempPoly);
+        if (this.tempRect) this.map.removeLayer(this.tempRect);
+        if (this.tempCircle) this.map.removeLayer(this.tempCircle);
         this.tempLine = null;
         this.tempPoly = null;
+        this.tempRect = null;
+        this.tempCircle = null;
     }
 
     /**
@@ -111,13 +133,20 @@ class DrawingManager {
         this.map.on('click', (e) => this.onMapClick(e));
         this.map.on('mousemove', (e) => this.onMouseMove(e));
         this.map.on('dblclick', (e) => this.onMapDoubleClick(e));
+        this.map.on('mousedown', (e) => this.onMouseDown(e));
+        this.map.on('mouseup', (e) => this.onMouseUp(e));
 
-        this.map.doubleClickZoom.disable(); 
+        this.map.doubleClickZoom.disable();
     }
 
     onMapClick(e) {
         if (this.ignoreNextClick) {
             this.ignoreNextClick = false;
+            return;
+        }
+
+        // [Fix] Don't exit edit mode if we just finished dragging
+        if (this.justDragged) {
             return;
         }
 
@@ -133,10 +162,16 @@ class DrawingManager {
         // 防止點擊到自己的 UI 元素
         const targetClass = e.originalEvent.target.className;
         if (typeof targetClass === 'string' && (
-            targetClass.includes('vertex-handle') || 
-            targetClass.includes('ghost-handle') || 
+            targetClass.includes('vertex-handle') ||
+            targetClass.includes('ghost-handle') ||
             targetClass.includes('delete-feature-btn')
         )) {
+            return;
+        }
+
+        // [New] Rectangle & Circle use Drag-to-Draw, so we ignore simple clicks for them
+        // unless it is to clear selection or something else
+        if (this.currentMode === 'rectangle' || this.currentMode === 'circle') {
             return;
         }
 
@@ -151,10 +186,32 @@ class DrawingManager {
     }
 
     onMouseMove(e) {
-        if (!this.isDrawing || this.drawingPoints.length === 0) return;
-        
+        if (!this.isDrawing) return;
+
+        // 1. Drag-to-Draw Logic (Rectangle & Circle)
+        if (this.dragStartPoint) {
+            if (this.currentMode === 'rectangle') {
+                const bounds = L.latLngBounds(this.dragStartPoint, e.latlng);
+                if (!this.tempRect) {
+                    this.tempRect = L.rectangle(bounds, { color: '#0d6efd', dashArray: '5, 5', interactive: false }).addTo(this.map);
+                } else {
+                    this.tempRect.setBounds(bounds);
+                }
+            } else if (this.currentMode === 'circle') {
+                const radius = this.dragStartPoint.distanceTo(e.latlng);
+                if (!this.tempCircle) {
+                    this.tempCircle = L.circle(this.dragStartPoint, { radius: radius, color: '#0d6efd', dashArray: '5, 5', interactive: false }).addTo(this.map);
+                } else {
+                    this.tempCircle.setRadius(radius);
+                }
+            }
+            return;
+        }
+
+        if (this.drawingPoints.length === 0) return;
+
         const previewPoints = [...this.drawingPoints, e.latlng];
-        
+
         if (!this.tempLine) {
             this.tempLine = L.polyline(previewPoints, { color: '#0d6efd', dashArray: '5, 5' }).addTo(this.map);
         } else {
@@ -180,11 +237,55 @@ class DrawingManager {
         }
 
         if (this.currentMode === 'polygon' && this.drawingPoints.length >= 3) {
-             if (!this.tempPoly) {
+            if (!this.tempPoly) {
                 this.tempPoly = L.polygon(this.drawingPoints, { color: '#0d6efd', fillOpacity: 0.1, dashArray: '5, 5' }).addTo(this.map);
             } else {
                 this.tempPoly.setLatLngs(this.drawingPoints);
             }
+        }
+    }
+
+    onMouseDown(e) {
+        if (!this.isDrawing) return;
+        if (this.currentMode === 'rectangle' || this.currentMode === 'circle') {
+            L.DomEvent.stopPropagation(e);
+            L.DomEvent.preventDefault(e);
+            this.dragStartPoint = e.latlng;
+            this.map.dragging.disable();
+        }
+    }
+
+    onMouseUp(e) {
+        if (!this.isDrawing || !this.dragStartPoint) return;
+
+        L.DomEvent.stopPropagation(e);
+        L.DomEvent.preventDefault(e);
+
+        try {
+            if (this.currentMode === 'rectangle') {
+                const bounds = L.latLngBounds(this.dragStartPoint, e.latlng);
+                this.createRectangle(bounds);
+            } else if (this.currentMode === 'circle') {
+                const radius = this.dragStartPoint.distanceTo(e.latlng);
+                this.createCircle(this.dragStartPoint, radius);
+            }
+        } catch (error) {
+            console.error('[Drawing] Error in onMouseUp:', error);
+        } finally {
+            this.dragStartPoint = null;
+            this.map.dragging.enable();
+
+            // Force removal of temp layers to be sure
+            if (this.tempRect) {
+                this.map.removeLayer(this.tempRect);
+                this.tempRect = null;
+            }
+            if (this.tempCircle) {
+                this.map.removeLayer(this.tempCircle);
+                this.tempCircle = null;
+            }
+
+            this.toggleMode(null, null); // Finish drawing
         }
     }
 
@@ -193,7 +294,7 @@ class DrawingManager {
 
         L.DomEvent.stopPropagation(e);
         L.DomEvent.preventDefault(e);
-        
+
         if (this.currentMode === 'polygon' && this.drawingPoints.length >= 3) {
             this.createPolygon(this.drawingPoints);
         } else if (this.currentMode === 'polyline' && this.drawingPoints.length >= 2) {
@@ -204,40 +305,68 @@ class DrawingManager {
         setTimeout(() => this.ignoreNextClick = false, 300);
 
         // [Fix] 結束繪製時，傳入 null 作為 btn，避免 undefined 錯誤
-        this.toggleMode(null, null); 
+        this.toggleMode(null, null);
     }
 
     /**
      * 3. Creation Logic
      */
     createPolygon(latlngs) {
-        console.log('[Drawing] Creating Polygon with points:', latlngs.length);
-        const poly = L.polygon(latlngs, { color: '#0d6efd' }).addTo(this.drawnItems);
+        // [Fix] Filter duplicate points to prevent ghost handles at vertices
+        const uniquePoints = this.cleanPoints(latlngs);
+        console.log('[Drawing] Creating Polygon with points:', uniquePoints.length);
+        const poly = L.polygon(uniquePoints, { color: '#0d6efd' }).addTo(this.drawnItems);
         this.registerShape(poly, 'polygon');
     }
 
     createPolyline(latlngs) {
-        console.log('[Drawing] Creating Polyline with points:', latlngs.length);
-        const line = L.polyline(latlngs, { color: '#0d6efd' }).addTo(this.drawnItems);
+        // [Fix] Filter duplicate points
+        const uniquePoints = this.cleanPoints(latlngs);
+        console.log('[Drawing] Creating Polyline with points:', uniquePoints.length);
+        const line = L.polyline(uniquePoints, { color: '#0d6efd' }).addTo(this.drawnItems);
         this.registerShape(line, 'polyline');
+    }
+
+    /**
+     * [Fix] Helper to remove adjacent duplicate points (often caused by double-click)
+     */
+    cleanPoints(latlngs) {
+        if (latlngs.length < 2) return latlngs;
+        return latlngs.filter((p, i) => {
+            if (i === 0) return true;
+            // Use Leaflet's equals with default tolerance
+            return !p.equals(latlngs[i - 1]);
+        });
+    }
+
+    createRectangle(bounds) {
+        console.log('[Drawing] Creating Rectangle');
+        const rect = L.rectangle(bounds, { color: '#0d6efd' }).addTo(this.drawnItems);
+        this.registerShape(rect, 'rectangle');
+    }
+
+    createCircle(center, radius) {
+        console.log('[Drawing] Creating Circle');
+        const circle = L.circle(center, { radius: radius, color: '#0d6efd' }).addTo(this.drawnItems);
+        this.registerShape(circle, 'circle');
     }
 
     createMarker(latlng) {
         console.log('[Drawing] Creating Waypoint marker');
-        
+
         // [關鍵修正] 建立新點時，繼承全域設定 (Global Settings)
         // 否則這些值會是 undefined，導致 Popup 開啟時報錯
         const settings = this.app.settings;
 
-        const wp = { 
-            lat: latlng.lat, 
-            lng: latlng.lng, 
+        const wp = {
+            lat: latlng.lat,
+            lng: latlng.lng,
             index: this.app.waypoints.length,
-            
+
             // 補上預設值
             altitude: settings.altitude || 60,
             speed: settings.speed || 5.5,
-            heading: 0, 
+            heading: 0,
             gimbalAngle: settings.gimbalAngle || -90,
             actionGimbalPitch: settings.actionGimbalPitch || -75,
             action: settings.action || 'noAction'
@@ -250,7 +379,7 @@ class DrawingManager {
 
     registerShape(layer, type, skipSave = false) { // [新增] skipSave 參數
         console.log(`[Drawing] Registering shape: ${type}, skipSave: ${skipSave}`);
-        
+
         layer.on('dblclick', (e) => {
             L.DomEvent.stopPropagation(e);
             L.DomEvent.preventDefault(e);
@@ -264,7 +393,7 @@ class DrawingManager {
         });
 
         this.app.shapes.push({ layer: layer, type: type });
-        
+
         // [修改] 只有當不是還原過程時，才儲存狀態
         if (!skipSave) {
             console.log('[Drawing] Triggering app.saveState() from registerShape');
@@ -280,9 +409,9 @@ class DrawingManager {
     enableEdit(layer, type) {
         console.log('[Drawing] Enable Edit');
         // [Fix] 進入編輯模式前，強制取消任何繪圖狀態
-        this.cancelDrawing(); 
-        
-        this.disableEdit(); 
+        this.cancelDrawing();
+
+        this.disableEdit();
         this.editingLayer = layer;
         this.editingType = type;
 
@@ -299,31 +428,61 @@ class DrawingManager {
         this.editingLayer.setStyle({ color: '#0d6efd', dashArray: null });
         this.editHandlesLayer.clearLayers();
         this.editingLayer = null;
-        this.app.saveState(); 
+        this.app.saveState();
     }
 
     renderHandles(layer, type) {
         this.editHandlesLayer.clearLayers();
+
+        if (type === 'rectangle') {
+            this.renderRectangleHandles(layer);
+            return;
+        }
+        if (type === 'circle') {
+            this.renderCircleHandles(layer);
+            return;
+        }
+
         const latlngs = layer.getLatLngs();
-        const points = type === 'polygon' ? latlngs[0] : latlngs; 
+        const points = type === 'polygon' ? latlngs[0] : latlngs;
+
+        const vertexHandles = [];
 
         points.forEach((latlng, index) => {
             const handle = this.createHandle(latlng, 'vertex-handle');
-            
+
             handle.on('drag', (e) => {
                 L.DomEvent.stopPropagation(e);
-                points[index] = e.target.getLatLng();
+                const newPos = e.target.getLatLng();
+                points[index] = newPos;
                 type === 'polygon' ? layer.setLatLngs([points]) : layer.setLatLngs(points);
                 this.updateDeleteButtonPosition(layer);
+
+                // [Fix] Update adjacent ghost handles in real-time
+                if (handle.prevGhost) {
+                    const prevIdx = (index - 1 + points.length) % points.length;
+                    if (!(type === 'polyline' && index === 0)) {
+                        const pPrev = points[prevIdx];
+                        handle.prevGhost.setLatLng([(pPrev.lat + newPos.lat) / 2, (pPrev.lng + newPos.lng) / 2]);
+                    }
+                }
+                if (handle.nextGhost) {
+                    const nextIdx = (index + 1) % points.length;
+                    if (!(type === 'polyline' && index === points.length - 1)) {
+                        const pNext = points[nextIdx];
+                        handle.nextGhost.setLatLng([(newPos.lat + pNext.lat) / 2, (newPos.lng + pNext.lng) / 2]);
+                    }
+                }
             });
 
             handle.on('dragend', () => this.renderHandles(layer, type));
+            vertexHandles.push(handle);
             this.editHandlesLayer.addLayer(handle);
         });
 
         for (let i = 0; i < points.length; i++) {
             const nextIdx = (i + 1) % points.length;
-            if (type === 'polyline' && i === points.length - 1) break; 
+            if (type === 'polyline' && i === points.length - 1) break;
 
             const p1 = points[i];
             const p2 = points[nextIdx];
@@ -332,15 +491,19 @@ class DrawingManager {
 
             const ghost = this.createHandle([midLat, midLng], 'ghost-handle');
 
+            // Link ghost to its flanking vertex handles
+            vertexHandles[i].nextGhost = ghost;
+            vertexHandles[nextIdx].prevGhost = ghost;
+
             ghost.on('dragstart', (e) => {
-                L.DomEvent.stopPropagation(e); 
+                L.DomEvent.stopPropagation(e);
                 ghost.getElement().classList.remove('ghost-handle');
                 ghost.getElement().classList.add('vertex-handle');
-                points.splice(i + 1, 0, ghost.getLatLng()); 
+                points.splice(i + 1, 0, ghost.getLatLng());
             });
 
             ghost.on('drag', (e) => {
-                L.DomEvent.stopPropagation(e); 
+                L.DomEvent.stopPropagation(e);
                 points[i + 1] = e.target.getLatLng();
                 type === 'polygon' ? layer.setLatLngs([points]) : layer.setLatLngs(points);
                 this.updateDeleteButtonPosition(layer);
@@ -349,6 +512,66 @@ class DrawingManager {
             ghost.on('dragend', () => this.renderHandles(layer, type));
             this.editHandlesLayer.addLayer(ghost);
         }
+    }
+
+    renderRectangleHandles(layer) {
+        const latlngs = layer.getLatLngs()[0];
+        const handles = [];
+
+        // 1. Vertex Handles (Resize)
+        latlngs.forEach((latlng, index) => {
+            const handle = this.createHandle(latlng, 'vertex-handle');
+            handle.index = index; // Important for syncing
+            handles.push(handle);
+            this.editHandlesLayer.addLayer(handle);
+
+            handle.on('drag', (e) => {
+                L.DomEvent.stopPropagation(e);
+                const newPos = e.target.getLatLng();
+
+                // Resize based on opposite corner
+                const oppositeIdx = (index + 2) % 4;
+                const oppositePoint = latlngs[oppositeIdx];
+                const newBounds = L.latLngBounds(oppositePoint, newPos);
+
+                layer.setBounds(newBounds);
+
+                // Update all handles positions to match new bounds
+                const newPoints = layer.getLatLngs()[0];
+                handles.forEach((h, i) => h.setLatLng(newPoints[i]));
+
+                this.updateDeleteButtonPosition(layer);
+            });
+        });
+
+        // 2. Enable Body Drag
+        this.makeDraggable(layer, handles);
+
+        this.renderDeleteButton(layer);
+    }
+
+    renderCircleHandles(layer) {
+        const center = layer.getLatLng();
+        const bounds = layer.getBounds();
+        const radiusPoint = L.latLng(bounds.getNorth(), center.lng);
+
+        // 1. Radius Handle (Resize)
+        const radiusHandle = this.createHandle(radiusPoint, 'vertex-handle');
+        this.radiusHandle = radiusHandle; // Store ref for makeDraggable
+        this.editHandlesLayer.addLayer(radiusHandle);
+
+        radiusHandle.on('drag', (e) => {
+            L.DomEvent.stopPropagation(e);
+            const newPos = e.target.getLatLng();
+            const newRadius = layer.getLatLng().distanceTo(newPos);
+            layer.setRadius(newRadius);
+            this.updateDeleteButtonPosition(layer);
+        });
+
+        // 2. Enable Body Drag
+        this.makeDraggable(layer, [radiusHandle]);
+
+        this.renderDeleteButton(layer);
     }
 
     createHandle(latlng, className) {
@@ -371,17 +594,115 @@ class DrawingManager {
             L.DomEvent.stopPropagation(e);
         });
         marker.on('mousedown', (e) => {
-            L.DomEvent.stopPropagation(e); 
+            L.DomEvent.stopPropagation(e);
         });
 
         return marker;
     }
 
     /**
+     * Helper to make a layer draggable by its body
+     */
+    makeDraggable(layer, handles = []) {
+        console.log('[Drawing] makeDraggable init');
+        let isDragging = false;
+        let startPoint = null;
+        let startLatLngs = null;
+        let startCenter = null;
+
+        layer.on('mousedown', (e) => {
+            if (this.currentMode) return;
+            if (!this.editingLayer) return; // Only if editing
+
+            L.DomEvent.stopPropagation(e);
+            L.DomEvent.preventDefault(e);
+
+            isDragging = true;
+            startPoint = e.latlng;
+            this.map.dragging.disable();
+
+            if (layer instanceof L.Polygon) {
+                // Deep copy latlngs
+                startLatLngs = layer.getLatLngs().map(ring => ring.map(ll => L.latLng(ll.lat, ll.lng)));
+            } else if (layer instanceof L.Circle) {
+                startCenter = layer.getLatLng();
+            }
+        });
+
+        this.map.on('mousemove', (e) => {
+            if (!isDragging || !startPoint) return;
+
+            const currentPoint = e.latlng;
+            const latDiff = currentPoint.lat - startPoint.lat;
+            const lngDiff = currentPoint.lng - startPoint.lng;
+
+            if (layer instanceof L.Polygon) {
+                // Polygon/Rectangle: Shift all points
+                const newLatLngs = startLatLngs.map(ring => {
+                    return ring.map(p => L.latLng(p.lat + latDiff, p.lng + lngDiff));
+                });
+                layer.setLatLngs(newLatLngs);
+
+                // Sync handles
+                if (handles.length > 0) {
+                    const flatPoints = newLatLngs[0];
+                    handles.forEach((h) => {
+                        if (h.index !== undefined && flatPoints[h.index]) {
+                            h.setLatLng(flatPoints[h.index]);
+                        }
+                    });
+                }
+
+            } else if (layer instanceof L.Circle) {
+                const newCenter = L.latLng(startCenter.lat + latDiff, startCenter.lng + lngDiff);
+                layer.setLatLng(newCenter);
+
+                // Sync radius handle (it's separate from center)
+                if (handles.length > 0) {
+                    // For circle handles, we passed radiusHandle in array
+                    // We need to re-calculate its position based on new center + radius (which shouldn't change)
+                    // Or simpler: shift handle by same diff
+                    handles.forEach(h => {
+                        if (h._startPos) {
+                            h.setLatLng([h._startPos.lat + latDiff, h._startPos.lng + lngDiff]);
+                        } else {
+                            // If we didn't store start pos, we can't easily shift. 
+                            // Let's store start pos on mousedown for handles?
+                            // Or just re-calc position from geometry if possible.
+                            // For Radius handle: North point
+                            if (h === this.radiusHandle) {
+                                const bounds = layer.getBounds();
+                                h.setLatLng(L.latLng(bounds.getNorth(), newCenter.lng));
+                            }
+                        }
+                    });
+                }
+            }
+
+            this.updateDeleteButtonPosition(layer);
+        });
+
+        this.map.on('mouseup', () => {
+            if (isDragging) {
+                isDragging = false;
+                startPoint = null;
+                this.map.dragging.enable();
+                this.app.saveState();
+            }
+        });
+    }
+
+    /**
      * 5. Delete Logic (Custom UI)
      */
     renderDeleteButton(layer) {
-        this.deleteBtnLayer = L.marker([0,0], {
+        // [Fix] Remove old delete button if it exists
+        if (this.deleteBtnLayer) {
+            this.editHandlesLayer.removeLayer(this.deleteBtnLayer);
+            this.deleteBtnLayer = null;
+        }
+
+        this.deleteBtnLayer = L.marker([0, 0], {
             icon: L.divIcon({
                 html: 'X',
                 className: 'delete-feature-btn',
@@ -394,10 +715,10 @@ class DrawingManager {
         this.deleteBtnLayer.on('click', (e) => {
             L.DomEvent.stopPropagation(e);
             L.DomEvent.preventDefault(e);
-            
+
             this.ignoreNextClick = true;
             setTimeout(() => this.ignoreNextClick = false, 100);
-            
+
             this.deleteCurrentFeature();
         });
 
@@ -416,10 +737,10 @@ class DrawingManager {
     deleteCurrentFeature() {
         if (!this.editingLayer) return;
         console.log('[Drawing] Deleting current feature');
-        
+
         this.map.removeLayer(this.editingLayer);
         this.app.shapes = this.app.shapes.filter(s => s.layer !== this.editingLayer);
-        
+
         this.disableEdit();
         // saveState is called in disableEdit()
     }
