@@ -1,0 +1,20 @@
+{
+    "name": "waypoint-api",
+    "version": "1.0.0",
+    "description": "Waypoint Auto-Calculation API for Vercel",
+    "main": "api/calculate.js",
+    "scripts": {
+        "test": "node test-local.js"
+    },
+    "keywords": [
+        "waypoint",
+        "dji",
+        "calculation",
+        "api"
+    ],
+    "author": "",
+    "license": "ISC",
+    "dependencies": {
+        "jszip": "^3.10.1"
+    }
+}

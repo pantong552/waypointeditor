@@ -1,0 +1,784 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DJI WPML (KML) 格式標準規範文檔 - Dark Mode</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet" />
+    <style>
+        :root {
+            /* 深色模式配色變量 */
+            --primary-color: #4da3ff; /* 亮藍色，對比度更高 */
+            --text-color: #d4d4d4;    /* 淺灰文字，不刺眼 */
+            --heading-color: #ffffff; /* 標題純白 */
+            --bg-color: #121212;      /* 主背景：近乎黑 */
+            --sidebar-bg: #1e1e1e;    /* 側邊欄：深灰 */
+            --border-color: #333333;  /* 邊框顏色 */
+            --code-bg: #1e1e1e;       /* 代碼塊背景 */
+            --table-head-bg: #252526; /* 表頭背景 */
+            --table-row-even: #1a1a1a;/* 表格偶數行 */
+            --table-hover: #2a2d2e;   /* 表格懸停 */
+            --blockquote-bg: #1a202c; /* 引用塊背景 */
+            --tag-bg: #333;           /* 標籤背景 */
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            color: var(--text-color);
+            background-color: var(--bg-color);
+            margin: 0;
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Scrollbar Styling (Dark) */
+        ::-webkit-scrollbar {
+            width: 10px;
+            height: 10px;
+        }
+        ::-webkit-scrollbar-track {
+            background: var(--bg-color); 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #444; 
+            border-radius: 5px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #555; 
+        }
+
+        /* Sidebar Navigation */
+        .sidebar {
+            width: 280px;
+            background-color: var(--sidebar-bg);
+            border-right: 1px solid var(--border-color);
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+            padding: 2rem 1rem;
+            box-sizing: border-box;
+            flex-shrink: 0;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.3);
+            z-index: 100;
+        }
+
+        .sidebar h3 {
+            font-size: 1.2rem;
+            margin-bottom: 1rem;
+            color: var(--primary-color);
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 0.5rem;
+        }
+
+        .sidebar ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .sidebar li {
+            margin-bottom: 0.5rem;
+        }
+
+        .sidebar a {
+            text-decoration: none;
+            color: #aaa;
+            font-size: 0.95rem;
+            display: block;
+            padding: 0.5rem 0.8rem;
+            border-radius: 4px;
+            transition: all 0.2s;
+        }
+
+        .sidebar a:hover {
+            background-color: rgba(77, 163, 255, 0.15);
+            color: #fff;
+            transform: translateX(4px);
+        }
+
+        /* Main Content */
+        .main-content {
+            flex-grow: 1;
+            margin-left: 280px;
+            padding: 3rem 4rem;
+            max-width: 1000px;
+            box-sizing: border-box;
+        }
+
+        /* Typography */
+        h1 {
+            font-size: 2.5rem;
+            color: var(--heading-color);
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 0.5rem;
+            margin-bottom: 2rem;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+        }
+
+        h2 {
+            font-size: 1.8rem;
+            margin-top: 3.5rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid var(--border-color);
+            color: var(--heading-color);
+        }
+
+        h3 {
+            font-size: 1.4rem;
+            margin-top: 2.5rem;
+            color: #eee;
+        }
+
+        h4 {
+            font-size: 1.1rem;
+            margin-top: 1.5rem;
+            color: var(--primary-color);
+            font-weight: 600;
+        }
+
+        p {
+            margin-bottom: 1rem;
+        }
+
+        a {
+            color: var(--primary-color);
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+
+        /* Tables */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.5rem 0;
+            font-size: 0.95rem;
+            background-color: var(--sidebar-bg);
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+        }
+
+        th, td {
+            border: 1px solid var(--border-color);
+            padding: 1rem;
+            text-align: left;
+        }
+
+        th {
+            background-color: var(--table-head-bg);
+            color: #fff;
+            font-weight: 600;
+            border-bottom: 2px solid var(--border-color);
+        }
+
+        tr:nth-child(even) {
+            background-color: var(--table-row-even);
+        }
+
+        tr:hover {
+            background-color: var(--table-hover);
+        }
+
+        /* Code Blocks */
+        pre {
+            background-color: #0d0d0d !important; /* 更深的黑色背景 */
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1rem;
+            overflow-x: auto;
+            margin: 1.5rem 0;
+        }
+
+        code {
+            font-family: "Fira Code", "Consolas", monospace;
+            font-size: 0.9rem;
+        }
+
+        /* Inline Code */
+        :not(pre) > code {
+            background-color: rgba(255, 255, 255, 0.1);
+            color: #ff9d9d;
+            padding: 0.2rem 0.4rem;
+            border-radius: 4px;
+            font-size: 0.9em;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+
+        /* Blockquotes */
+        blockquote {
+            border-left: 4px solid var(--primary-color);
+            background-color: var(--blockquote-bg);
+            margin: 1.5rem 0;
+            padding: 1rem 1.5rem;
+            color: #ccc;
+            border-radius: 0 8px 8px 0;
+        }
+
+        /* Checklists */
+        .checklist {
+            list-style: none;
+            padding: 0;
+        }
+        .checklist li {
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+        }
+        .checklist li::before {
+            content: "✓";
+            margin-right: 0.8rem;
+            color: var(--primary-color);
+            font-weight: bold;
+            font-size: 1.1em;
+        }
+
+        /* Footer */
+        footer {
+            margin-top: 4rem;
+            padding-top: 2rem;
+            border-top: 1px solid var(--border-color);
+            color: #666;
+            font-size: 0.9rem;
+            text-align: center;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            body {
+                flex-direction: column;
+            }
+            .sidebar {
+                width: 100%;
+                height: auto;
+                position: relative;
+                border-right: none;
+                border-bottom: 1px solid var(--border-color);
+                padding: 1rem;
+            }
+            .main-content {
+                margin-left: 0;
+                padding: 1.5rem;
+            }
+            table {
+                display: block;
+                overflow-x: auto;
+                white-space: nowrap;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <nav class="sidebar">
+        <h3>DJI WPML 規範</h3>
+        <ul>
+            <li><a href="#overview">文檔概述</a></li>
+            <li><a href="#structure">1. 文件結構</a></li>
+            <li><a href="#metadata">2. Document 元數據</a></li>
+            <li><a href="#mission-config">3. 任務配置 (Updated)</a></li>
+            <li><a href="#placemark">4. 航線與航點 (詳解)</a></li>
+            <li><a href="#gimbal-diff">4.4 雲台：屬性 vs 動作</a></li>
+            <li><a href="#action-dictionary">4.5 動作字典 (New)</a></li>
+            <li><a href="#kml-diff">5. 標準 KML vs WPML</a></li>
+            <li><a href="#example">6. 完整範例</a></li>
+            <li><a href="#checklist">7. 驗證檢查清單</a></li>
+            <li><a href="#limits">8. 特定要求與限制</a></li>
+            <li><a href="#errors">9. 常見錯誤</a></li>
+        </ul>
+    </nav>
+
+    <main class="main-content">
+        
+        <h1 id="overview">DJI WPML (Waypoint Mission Markup Language) KML 格式標準規範</h1>
+        
+        <p><strong>文檔版本:</strong> 1.1.0 (Enhanced)<br>
+        <strong>最後更新:</strong> 2026-01-16</p>
+
+        <blockquote>
+            DJI WPML 是基於 KML 2.2 標準的擴展格式，專門用於 DJI 無人機的航點任務定義。此文檔已根據最新 DJI 開發者文檔進行了補充，涵蓋了負載配置、全局參數及完整的動作字典。
+        </blockquote>
+
+        <h2 id="structure">1. 文件結構</h2>
+
+        <h3>1.1 XML 聲明和根元素</h3>
+        <p>所有 DJI WPML 文件必須遵循以下基本結構：</p>
+        <pre><code class="language-xml">&lt;?xml version="1.0" encoding="UTF-8"?&gt;
+&lt;kml xmlns="http://www.opengis.net/kml/2.2" 
+     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+     xmlns:wpml="http://www.dji.com/wpmz/1.0.2"
+     xsi:schemaLocation="http://www.opengis.net/kml/2.2 http://schemas.opengis.net/kml/2.2.0/kml22.xsd"&gt;
+  &lt;Document&gt;
+    &lt;!-- 文檔內容 --&gt;
+  &lt;/Document&gt;
+&lt;/kml&gt;</code></pre>
+
+        <h3>1.2 命名空間聲明</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>命名空間前綴</th>
+                    <th>命名空間 URI</th>
+                    <th>用途</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>(預設)</td>
+                    <td><code>http://www.opengis.net/kml/2.2</code></td>
+                    <td>標準 KML 2.2 命名空間</td>
+                </tr>
+                <tr>
+                    <td><code>wpml</code></td>
+                    <td><code>http://www.dji.com/wpmz/1.0.2</code></td>
+                    <td>DJI WPML 擴展命名空間</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h2 id="metadata">2. Document 元數據</h2>
+        <p>這部分定義了任務的基本資訊。</p>
+        <pre><code class="language-xml">&lt;wpml:author&gt;fly&lt;/wpml:author&gt;
+&lt;wpml:createTime&gt;1704067200000&lt;/wpml:createTime&gt;
+&lt;wpml:updateTime&gt;1704067200000&lt;/wpml:updateTime&gt;</code></pre>
+        <ul>
+            <li><strong>createTime/updateTime</strong>: 使用 Unix 毫秒級時間戳。</li>
+        </ul>
+
+        <h2 id="mission-config">3. 任務配置 (MissionConfig)</h2>
+        <p>定義全局的飛行行為，包括起飛安全高度、失控動作及負載配置。</p>
+        
+        <pre><code class="language-xml">&lt;wpml:missionConfig&gt;
+  &lt;wpml:flyToWaylineMode&gt;safely&lt;/wpml:flyToWaylineMode&gt;
+  &lt;wpml:finishAction&gt;goHome&lt;/wpml:finishAction&gt;
+  &lt;wpml:exitOnRCLost&gt;executeLostAction&lt;/wpml:exitOnRCLost&gt;
+  &lt;wpml:executeRCLostAction&gt;hover&lt;/wpml:executeRCLostAction&gt;
+  &lt;wpml:globalTransitionalSpeed&gt;10&lt;/wpml:globalTransitionalSpeed&gt;
+  
+  &lt;!-- 新增：起飛安全高度 (米) --&gt;
+  &lt;wpml:takeOffSecurityHeight&gt;20&lt;/wpml:takeOffSecurityHeight&gt;
+  
+  &lt;!-- 機型資訊 --&gt;
+  &lt;wpml:droneInfo&gt;
+    &lt;wpml:droneEnumValue&gt;77&lt;/wpml:droneEnumValue&gt; &lt;!-- 77 = M350 RTK --&gt;
+    &lt;wpml:droneSubEnumValue&gt;0&lt;/wpml:droneSubEnumValue&gt;
+  &lt;/wpml:droneInfo&gt;
+
+  &lt;!-- 新增：負載資訊 (重要：定義相機掛載位置) --&gt;
+  &lt;wpml:payloadInfo&gt;
+    &lt;wpml:payloadEnumValue&gt;80&lt;/wpml:payloadEnumValue&gt; &lt;!-- 80 = H20T --&gt;
+    &lt;wpml:payloadSubEnumValue&gt;0&lt;/wpml:payloadSubEnumValue&gt;
+    &lt;wpml:payloadPositionIndex&gt;0&lt;/wpml:payloadPositionIndex&gt; &lt;!-- 0:左, 1:右, 2:頂 --&gt;
+  &lt;/wpml:payloadInfo&gt;
+&lt;/wpml:missionConfig&gt;</code></pre>
+
+        <h3>3.1 常用枚舉值參考</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>類型</th>
+                    <th>枚舉值 (Value)</th>
+                    <th>描述</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Drone</strong></td>
+                    <td>60</td>
+                    <td>Matrice 300 RTK</td>
+                </tr>
+                <tr>
+                    <td><strong>Drone</strong></td>
+                    <td>77</td>
+                    <td>Matrice 350 RTK / Mavic 3 Enterprise</td>
+                </tr>
+                <tr>
+                    <td><strong>Drone</strong></td>
+                    <td>67</td>
+                    <td>Matrice 30 / 30T</td>
+                </tr>
+                <tr>
+                    <td><strong>Drone</strong></td>
+                    <td>68</td>
+                    <td>Mavic 3 (Consumer/Enterprise)</td>
+                </tr>
+                <tr>
+                    <td><strong>Payload</strong></td>
+                    <td>80</td>
+                    <td>Zenmuse H20T</td>
+                </tr>
+                <tr>
+                    <td><strong>Payload</strong></td>
+                    <td>66</td>
+                    <td>Zenmuse L1 (LiDAR)</td>
+                </tr>
+                 <tr>
+                    <td><strong>Payload</strong></td>
+                    <td>42</td>
+                    <td>Zenmuse P1</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h2 id="placemark">4. 航線與航點 (詳解)</h2>
+        <p>此章節是 WPML 的核心，定義了單個航點的所有屬性。</p>
+
+        <h3>4.1 Folder (航線容器與全局參數)</h3>
+        <p>除了包含 Placemark，Folder 還可以定義「全局參數」。如果 Placemark 內未定義特定參數，則繼承此處的設定。</p>
+        <pre><code class="language-xml">&lt;Folder&gt;
+  &lt;wpml:templateId&gt;0&lt;/wpml:templateId&gt;
+  &lt;wpml:executeHeightMode&gt;WGS84&lt;/wpml:executeHeightMode&gt; &lt;!-- 推薦使用 WGS84 --&gt;
+  &lt;wpml:waypointSpeed&gt;10&lt;/wpml:waypointSpeed&gt; &lt;!-- 全局速度 --&gt;
+  
+  &lt;!-- 全局轉彎模式 --&gt;
+  &lt;wpml:globalWaypointTurnMode&gt;toPointAndStopWithContinuityCurvature&lt;/wpml:globalWaypointTurnMode&gt;
+  
+  &lt;!-- 全局航向模式 --&gt;
+  &lt;wpml:globalWaypointHeadingParam&gt;
+    &lt;wpml:waypointHeadingMode&gt;followWayline&lt;/wpml:waypointHeadingMode&gt;
+  &lt;/wpml:globalWaypointHeadingParam&gt;
+  
+  &lt;!-- Placemarks 放在這裡 --&gt;
+&lt;/Folder&gt;</code></pre>
+
+        <h3>4.2 Placemark (航點定義)</h3>
+        <p>這是最關鍵的部分。每個 Placemark 代表一個航點。</p>
+        
+        <pre><code class="language-xml">&lt;Placemark&gt;
+  &lt;!-- 1. 空間座標 --&gt;
+  &lt;Point&gt;
+    &lt;coordinates&gt;120.382555,37.161279,60&lt;/coordinates&gt;
+  &lt;/Point&gt;
+
+  &lt;!-- 2. 基礎屬性 --&gt;
+  &lt;wpml:index&gt;0&lt;/wpml:index&gt;
+  &lt;wpml:executeHeight&gt;60&lt;/wpml:executeHeight&gt;
+  &lt;wpml:waypointSpeed&gt;12&lt;/wpml:waypointSpeed&gt;
+
+  &lt;!-- 3. 航向參數 --&gt;
+  &lt;wpml:waypointHeadingParam&gt;
+    &lt;wpml:waypointHeadingMode&gt;smoothTransition&lt;/wpml:waypointHeadingMode&gt;
+    &lt;wpml:waypointHeadingAngle&gt;-114&lt;/wpml:waypointHeadingAngle&gt;
+    &lt;wpml:waypointHeadingAngleEnable&gt;1&lt;/wpml:waypointHeadingAngleEnable&gt;
+  &lt;/wpml:waypointHeadingParam&gt;
+
+  &lt;!-- 4. 轉向與路徑參數 --&gt;
+  &lt;wpml:waypointTurnParam&gt;
+    &lt;wpml:waypointTurnMode&gt;toPointAndStopWithContinuityCurvature&lt;/wpml:waypointTurnMode&gt;
+    &lt;wpml:waypointTurnDampingDist&gt;0&lt;/wpml:waypointTurnDampingDist&gt;
+  &lt;/wpml:waypointTurnParam&gt;
+  &lt;wpml:useStraightLine&gt;0&lt;/wpml:useStraightLine&gt;
+
+  &lt;!-- 5. 雲台參數 --&gt;
+  &lt;wpml:waypointGimbalHeadingParam&gt;
+    &lt;wpml:waypointGimbalPitchAngle&gt;-45&lt;/wpml:waypointGimbalPitchAngle&gt;
+    &lt;wpml:waypointGimbalYawAngle&gt;0&lt;/wpml:waypointGimbalYawAngle&gt;
+  &lt;/wpml:waypointGimbalHeadingParam&gt;
+
+  &lt;!-- 6. 動作組 --&gt;
+  &lt;wpml:actionGroup&gt;...&lt;/wpml:actionGroup&gt;
+&lt;/Placemark&gt;</code></pre>
+
+        <h4>4.2.1 航向參數 (waypointHeadingParam)</h4>
+        <table>
+            <thead>
+                <tr>
+                    <th>標籤</th>
+                    <th>選項 (Options)</th>
+                    <th>描述</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><code>waypointHeadingMode</code></td>
+                    <td><code>smoothTransition</code></td>
+                    <td><strong>平滑過渡 (推薦)</strong>：機頭從上一航點角度平滑旋轉至此航點角度。</td>
+                </tr>
+                <tr>
+                    <td></td>
+                    <td><code>followWayline</code></td>
+                    <td><strong>沿航線方向</strong>：機頭始終朝向飛行路徑切線方向。</td>
+                </tr>
+                <tr>
+                    <td></td>
+                    <td><code>manually</code></td>
+                    <td><strong>手動控制</strong>：由飛手通過遙控器控制。</td>
+                </tr>
+                <tr>
+                    <td></td>
+                    <td><code>fixed</code></td>
+                    <td><strong>固定角度</strong>：鎖定為 Angle 設定的角度。</td>
+                </tr>
+                <tr>
+                    <td></td>
+                    <td><code>towardPOI</code></td>
+                    <td><strong>面向 POI</strong>：機頭始終朝向興趣點。</td>
+                </tr>
+                <tr>
+                    <td><code>waypointHeadingAngle</code></td>
+                    <td>-180 ~ 180</td>
+                    <td>機頭角度 (0=北, 90=東)。</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h4>4.2.2 轉向與路徑參數 (waypointTurnParam)</h4>
+        <table>
+            <thead>
+                <tr>
+                    <th>標籤</th>
+                    <th>選項 (Options)</th>
+                    <th>描述</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><code>waypointTurnMode</code></td>
+                    <td><code>toPointAndStopWithContinuityCurvature</code></td>
+                    <td><strong>曲線飛行並停下 (推薦)</strong>：以曲線路徑入彎並在點上停下。</td>
+                </tr>
+                <tr>
+                    <td></td>
+                    <td><code>coordinateTurn</code></td>
+                    <td><strong>協調轉彎 (不停)</strong>：平滑飛過航點，提前切角，適合快速飛行。</td>
+                </tr>
+                <tr>
+                    <td></td>
+                    <td><code>toPointAndStopWithDiscontinuityCurvature</code></td>
+                    <td><strong>直線飛行並停下</strong>：直線飛到點，急停，調整方向。</td>
+                </tr>
+                <tr>
+                    <td></td>
+                    <td><code>toPointAndPassWithContinuityCurvature</code></td>
+                    <td><strong>曲線飛行並通過</strong>：精確經過航點，不停頓。</td>
+                </tr>
+                <tr>
+                    <td><code>useStraightLine</code></td>
+                    <td>0, 1</td>
+                    <td>是否強制直線飛行 (1=強制)。</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h4>4.2.3 雲台參數 (waypointGimbalHeadingParam)</h4>
+        <table>
+            <thead>
+                <tr>
+                    <th>參數</th>
+                    <th>範圍</th>
+                    <th>描述</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><code>waypointGimbalPitchAngle</code></td>
+                    <td>-90.0 ~ 0.0</td>
+                    <td>雲台俯仰角 (-90=垂直向下, 0=水平)。</td>
+                </tr>
+                <tr>
+                    <td><code>waypointGimbalYawAngle</code></td>
+                    <td>-180.0 ~ 180.0</td>
+                    <td>雲台偏航角 (通常設為 0)。</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h2 id="action-group">4.3 航點動作 (actionGroup)</h2>
+        <p>定義到達航點後執行的動作，如拍照、錄像或懸停。</p>
+        <pre><code class="language-xml">&lt;wpml:actionGroup&gt;
+  &lt;wpml:actionGroupId&gt;1&lt;/wpml:actionGroupId&gt;
+  &lt;wpml:actionTrigger&gt;
+    &lt;wpml:actionTriggerType&gt;reachPoint&lt;/wpml:actionTriggerType&gt;
+  &lt;/wpml:actionTrigger&gt;
+  &lt;wpml:action&gt;
+    &lt;wpml:actionId&gt;1&lt;/wpml:actionId&gt;
+    &lt;wpml:actionActuatorFunc&gt;gimbalRotate&lt;/wpml:actionActuatorFunc&gt;
+    &lt;wpml:actionActuatorFuncParam&gt;
+      &lt;wpml:gimbalPitchRotateAngle&gt;-79&lt;/wpml:gimbalPitchRotateAngle&gt;
+      &lt;wpml:gimbalRollRotateAngle&gt;0&lt;/wpml:gimbalRollRotateAngle&gt;
+      &lt;wpml:payloadPositionIndex&gt;0&lt;/wpml:payloadPositionIndex&gt;
+    &lt;/wpml:actionActuatorFuncParam&gt;
+  &lt;/wpml:action&gt;
+&lt;/wpml:actionGroup&gt;</code></pre>
+
+        <h3 id="gimbal-diff">4.4 關鍵區別：航點屬性 (HeadingParam) vs. 動作指令 (Action)</h3>
+        <p>在 DJI WPML 中，雲台控制常出現兩種看似衝突的設定，理解其執行時序至關重要。</p>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>比較項目</th>
+                    <th><code>waypointGimbalHeadingParam</code> (屬性)</th>
+                    <th><code>actionActuatorFuncParam</code> (動作)</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>性質</strong></td>
+                    <td><strong>航段狀態 (State)</strong></td>
+                    <td><strong>觸發指令 (Command)</strong></td>
+                </tr>
+                <tr>
+                    <td><strong>執行時機</strong></td>
+                    <td>在<strong>飛往該航點的過程中</strong>逐漸變化。</td>
+                    <td><strong>到達航點後</strong> (且觸發了 actionTrigger) 才執行。</td>
+                </tr>
+                <tr>
+                    <td><strong>過渡效果</strong></td>
+                    <td>支持平滑插值 (從上一點漸變至此點)。</td>
+                    <td>通常為單次指令轉動，較為即時。</td>
+                </tr>
+                <tr>
+                    <td><strong>典型用途</strong></td>
+                    <td>保持飛行過程中的視角 (例如全程 -90° 俯視)。</td>
+                    <td>到達定點後，抬頭拍全景或特定角度特寫。</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <blockquote style="border-left-color: #ff4d4f;">
+            <strong>執行順序範例：</strong><br>
+            若設定 <code>waypointGimbalPitchAngle = -90°</code> 且 Action 設定 <code>gimbalPitchRotateAngle = -79°</code>：<br>
+            <ol style="margin-top: 5px; margin-bottom: 5px;">
+                <li>無人機在飛向此航點時，雲台會逐漸轉至 <strong>-90°</strong> (垂直向下)。</li>
+                <li>到達航點懸停。</li>
+                <li>觸發 Action，雲台從 -90° 轉動至 <strong>-79°</strong> 進行拍攝。</li>
+                <li>飛向下一點時，將從 -79° 開始變化。</li>
+            </ol>
+        </blockquote>
+
+        <h2 id="action-dictionary">4.5 動作字典 (Action Dictionary)</h2>
+        <p><code>actionActuatorFunc</code> 定義了無人機具體執行的指令。以下是 WPML 支援的完整動作列表。</p>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>動作名稱 (Func)</th>
+                    <th>參數 (FuncParam)</th>
+                    <th>描述</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><code>takePhoto</code></td>
+                    <td>
+                        <code>payloadPositionIndex</code> (0-2)<br>
+                        <code>fileSuffix</code> (例如: "point1")
+                    </td>
+                    <td><strong>單張拍照</strong>。fileSuffix 可自定義照片名稱後綴。</td>
+                </tr>
+                <tr>
+                    <td><code>startRecord</code></td>
+                    <td><code>payloadPositionIndex</code> (0-2)<br><code>fileSuffix</code></td>
+                    <td><strong>開始錄影</strong>。</td>
+                </tr>
+                <tr>
+                    <td><code>stopRecord</code></td>
+                    <td><code>payloadPositionIndex</code> (0-2)</td>
+                    <td><strong>停止錄影</strong>。</td>
+                </tr>
+                <tr>
+                    <td><code>focus</code></td>
+                    <td>
+                        <code>payloadPositionIndex</code><br>
+                        <code>isPointFocus</code> (0:區域, 1:點對焦)<br>
+                        <code>focusX</code>, <code>focusY</code> (0.0 - 1.0)
+                    </td>
+                    <td><strong>對焦</strong>。X/Y 為屏幕歸一化坐標。</td>
+                </tr>
+                <tr>
+                    <td><code>zoom</code></td>
+                    <td>
+                        <code>payloadPositionIndex</code><br>
+                        <code>focalLength</code> (焦距 mm)
+                    </td>
+                    <td><strong>變焦</strong>。設置相機的具體焦距。</td>
+                </tr>
+                <tr>
+                    <td><code>gimbalRotate</code></td>
+                    <td>
+                        <code>gimbalPitchRotateAngle</code> (-90~0)<br>
+                        <code>gimbalRollRotateAngle</code><br>
+                        <code>gimbalYawRotateAngle</code>
+                    </td>
+                    <td><strong>雲台轉動</strong>。控制雲台轉向特定角度。</td>
+                </tr>
+                <tr>
+                    <td><code>hover</code></td>
+                    <td><code>hoverTime</code> (秒)</td>
+                    <td><strong>懸停</strong>。在當前點停留指定時間。</td>
+                </tr>
+                 <tr>
+                    <td><code>customDirName</code></td>
+                    <td><code>directoryName</code></td>
+                    <td><strong>創建文件夾</strong>。後續拍攝的素材將存入此文件夾。</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h4>動作觸發器 (Action Trigger)</h4>
+        <p>定義動作何時執行：</p>
+        <ul>
+            <li><code>reachPoint</code>: 到達航點時觸發（最常用）。</li>
+            <li><code>betweenAdjacentPoints</code>: 在兩點飛行過程中觸發。</li>
+            <li><code>multipleTiming</code>: 定時觸發 (例如每隔 2 秒拍一張)。</li>
+            <li><code>multipleDistance</code>: 定距觸發 (例如每隔 5 米拍一張)。</li>
+        </ul>
+
+        <h2 id="kml-diff">5. 標準 KML vs DJI WPML 的區別</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>特性</th>
+                    <th>標準 KML</th>
+                    <th>DJI WPML</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr><td>命名空間</td><td>單一</td><td>多命名空間 (KML + WPML)</td></tr>
+                <tr><td>飛行高度</td><td>不支持</td><td>支持 (executeHeight)</td></tr>
+                <tr><td>速度控制</td><td>不支持</td><td>支持 (waypointSpeed)</td></tr>
+                <tr><td>雲台/動作</td><td>不支持</td><td>完整支持</td></tr>
+            </tbody>
+        </table>
+
+        <h2 id="example">6. 完整範例</h2>
+        <p>請將上述章節的代碼片段（MissionConfig, Folder, Placemark）組合在 <code>&lt;Document&gt;</code> 標籤內即可構成完整文件。</p>
+
+        <h2 id="checklist">7. 驗證檢查清單</h2>
+        <ul class="checklist">
+            <li>XML 聲明必須為 <code>&lt;?xml version="1.0" encoding="UTF-8"?&gt;</code></li>
+            <li>必須包含 <code>xmlns:wpml="http://www.dji.com/wpmz/1.0.2"</code></li>
+            <li><strong>關鍵：</strong>若是 M300/M350，必須正確配置 <code>payloadInfo</code> 與 <code>payloadPositionIndex</code>。</li>
+            <li>Placemark 必須包含 <code>wpml:index</code> 且連續。</li>
+            <li>座標格式必須為 <code>lon,lat,altitude</code> (經度在前)。</li>
+            <li>若使用 <code>actionGroup</code>，確認 <code>actionId</code> 在組內唯一。</li>
+            <li><code>executeHeightMode</code> 推薦使用 <code>WGS84</code> 以確保精確的橢球高度。</li>
+        </ul>
+
+        <h2 id="limits">8. 特定要求與限制</h2>
+        <ul>
+            <li><strong>最大航點數</strong>: 65535 (建議 &lt; 500)</li>
+            <li><strong>最小高度</strong>: 5米 (安全限制)</li>
+            <li><strong>座標系</strong>: 必須使用 WGS84</li>
+            <li><strong>時間戳</strong>: 必須為 Unix 毫秒格式</li>
+        </ul>
+
+        <h2 id="errors">9. 常見錯誤</h2>
+        <ul>
+            <li><strong>坐標反轉</strong>: 誤將緯度放在前面 (正確應為 經度,緯度)。</li>
+            <li><strong>命名空間遺失</strong>: 缺少 xmlns:wpml 導致 DJI Pilot 無法讀取參數。</li>
+            <li><strong>高度模式錯誤</strong>: 使用 relativeToGround 但地面高程數據缺失。</li>
+        </ul>
+
+        <hr>
+        <footer>
+            <p>文檔生成與整理：Gemini AI Assistant | 原始規範：DJI Developer Documentation</p>
+        </footer>
+    </main>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-xml.min.js"></script>
+</body>
+</html>

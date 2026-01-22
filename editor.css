@@ -1,0 +1,937 @@
+/* ========================================
+   WaypointMap Leaflet - Dark Mode Compact Styles
+   ======================================== */
+
+:root {
+    /* Dark Mode Palette */
+    --bg-dark: #121212;
+    --bg-panel: #1e1e1e;
+    --bg-input: #2b2b2b;
+    --border-color: #333333;
+    --text-main: #e0e0e0;
+    --text-muted: #b0b0b0;
+    /* 稍微調亮一點讓閱讀更輕鬆 */
+    --primary-color: #0d6efd;
+    --accent-color: #00d68f;
+    --danger-color: #ff4d4f;
+    --header-height: 50px;
+    --sidebar-width: 380px;
+    --input-height: 35px;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background-color: var(--bg-dark);
+    color: var(--text-main);
+
+    /* [修改] 回歸標準字體大小，不再縮小 */
+    font-size: 1rem;
+    /* 0.85rem -> 1rem */
+    overflow: hidden;
+}
+
+/* ========================================
+   Input Height Standardization
+   ======================================== */
+
+/* 強制統一高度，解決 select 與 input 對不齊的問題 */
+.form-control,
+.form-select,
+.input-group-text,
+.btn-xs {
+    /* 如果有按鈕跟輸入框排在一起 */
+    height: var(--input-height);
+
+    /* 確保內容垂直置中 */
+    display: flex;
+    align-items: center;
+}
+
+/* 特別處理：select 不需要 display:flex，否則箭頭會跑版，且需要特定的 padding */
+select.form-select {
+    display: block;
+    /* 還原 display */
+    padding-top: 0.375rem;
+    /* 微調 padding 讓文字垂直置中 */
+    padding-bottom: 0.375rem;
+}
+
+/* 特別處理：textarea 不應限制高度 */
+textarea.form-control {
+    height: auto;
+}
+
+/* 確保 input-group 裡面的標籤 (如 'm', 'm/s') 也是一樣高度 */
+.input-group-text {
+    padding-top: 0;
+    padding-bottom: 0;
+    justify-content: center;
+    /* 文字水平置中 */
+}
+
+/* ========================================
+   Compact Header
+   ======================================== */
+.header-compact {
+    height: var(--header-height);
+    background-color: var(--bg-panel);
+    z-index: 1000;
+}
+
+/* [修改] 重新定義 btn-xs，讓它變大，接近 Bootstrap 的 btn-sm */
+.btn-xs {
+    padding: 0.25rem 0.5rem;
+    /* 增加內距 */
+    font-size: 0.875rem;
+    /* 字體加大 */
+    border-radius: 4px;
+}
+
+/* ========================================
+   Layout Structure
+   ======================================== */
+main {
+    height: calc(100vh - var(--header-height));
+}
+
+.sidebar-compact {
+    width: var(--sidebar-width);
+    background-color: var(--bg-panel);
+    flex-shrink: 0;
+    z-index: 900;
+}
+
+#map-container {
+    background-color: #1a1a1a;
+}
+
+#map {
+    z-index: 1;
+    /* 確保地圖容器本身沒有額外的背景色影響 */
+    background: transparent;
+}
+
+/* ========================================
+   Sidebar & Forms
+   ======================================== */
+.nav-pills .nav-link {
+    color: var(--text-muted);
+    border-radius: 0;
+    font-size: 0.95rem;
+    /* [修改] 加大 Tab 字體 */
+    font-weight: 500;
+    padding: 0.5rem 1rem;
+    /* [修改] 增加 Tab 點擊範圍 */
+}
+
+.nav-pills .nav-link.active {
+    background-color: transparent;
+    color: var(--primary-color);
+    border-bottom: 2px solid var(--primary-color);
+}
+
+.nav-pills .nav-link:hover {
+    color: var(--text-main);
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: var(--bg-panel);
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #444;
+    border-radius: 3px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+
+.section-title {
+    font-size: 0.85rem;
+    /* [修改] 0.7rem -> 0.85rem */
+    text-transform: uppercase;
+    color: var(--text-muted);
+    font-weight: 700;
+    margin-top: 1rem;
+    /* [修改] 增加區塊間距 0.5rem -> 1rem */
+    margin-bottom: 0.5rem;
+    border-left: 4px solid var(--primary-color);
+    /* 稍微加粗線條 */
+    padding-left: 0.6rem;
+}
+
+.form-label-xs {
+    font-size: 0.85rem;
+    /* [修改] 0.7rem -> 0.85rem (現在容易閱讀了) */
+    color: var(--text-muted);
+    margin-bottom: 0.3rem;
+    /* 增加標籤與輸入框的距離 */
+    display: block;
+}
+
+/* Input Overrides for Dark Mode */
+.form-control-sm,
+.form-select-sm,
+.input-group-text {
+    font-size: 0.9rem;
+    /* [修改] 輸入框字體加大 */
+    padding: 0.375rem 0.5rem;
+    /* [修改] 增加輸入框高度 */
+}
+
+.form-control:focus,
+.form-select:focus {
+    background-color: var(--bg-input);
+    color: var(--text-main);
+    border-color: var(--primary-color);
+    box-shadow: none;
+}
+
+.input-group-text {
+    padding: 0 0.4rem;
+}
+
+/* Toggle Switch Sizes */
+.form-switch .form-check-input {
+    width: 2em;
+    height: 1em;
+    margin-top: 0.15em;
+    background-color: #444;
+    border-color: #555;
+}
+
+.form-switch .form-check-input:checked {
+    background-color: var(--accent-color);
+    border-color: var(--accent-color);
+}
+
+/* ========================================
+   Custom Waypoint Icons (DJI Style)
+   ======================================== */
+
+/* [新增] 針對 Leaflet Icon 容器的設定 */
+.dji-waypoint-icon {
+    background: transparent;
+    border: none;
+    /* [關鍵] 讓整個 40x40 方框「對滑鼠透明」，不觸發 Hover/Click */
+    pointer-events: none !important;
+}
+
+.dji-icon-wrapper {
+    position: relative;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    pointer-events: none;
+    /* 確保 Wrapper 也不擋住 */
+}
+
+.dji-icon-circle {
+    width: 25px;
+    height: 25px;
+    background-color: var(--accent-color);
+    border: 2px solid #fff;
+    border-radius: 50%;
+    color: #ffffff;
+    font-family: Arial, sans-serif;
+    font-weight: bold;
+    font-size: 11px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+    z-index: 10;
+
+    /* [關鍵] 只讓圓圈恢復感應滑鼠事件 */
+    pointer-events: auto;
+    cursor: pointer;
+    transition: transform 0.1s ease;
+    /* 加一點點動效讓 Hover 更明顯 */
+}
+
+/* 為了更好的 UX，Hover 到圓圈時稍微放大 */
+.dji-icon-circle:hover {
+    transform: scale(1.2);
+}
+
+.dji-icon-arrow {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 5;
+    pointer-events: none;
+    /* 箭頭本身也不感應，只感應圓圈 */
+}
+
+/* ... Arrow 的 ::after 樣式保持不變 ... */
+.dji-icon-arrow::after {
+    content: '';
+    position: absolute;
+    top: 0px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 0;
+    border-left: 9px solid transparent;
+    border-right: 9px solid transparent;
+    border-bottom: 15px solid var(--accent-color);
+    filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.5));
+}
+
+/* Path Line Style */
+.waypoint-path {
+    stroke: var(--accent-color);
+    /* Neon Green for better visibility on dark maps */
+    stroke-width: 3;
+    opacity: 0.9;
+    /* 確保線條不會捕捉滑鼠事件，避免干擾拖點 */
+    pointer-events: none;
+}
+
+/* ========================================
+   Modals
+   ======================================== */
+.modal-content {
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+}
+
+.btn-close-white {
+    filter: invert(1) grayscale(100%) brightness(200%);
+}
+
+.waypoint-popup {
+    position: absolute;
+    padding: 0 10px 10px 10px;
+    width: 320px;
+    /* 稍微加寬一點以容納內容 */
+    z-index: 2000;
+    /* 確保在地圖之上 (Leaflet z-index 通常在 1000 以下) */
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    border-radius: 10px;
+    display: flex;
+    flex-direction: column;
+    pointer-events: auto;
+    /* 允許點擊 */
+}
+
+/* 讓 Header 看起來可以抓取 */
+.waypoint-popup .modal-header {
+    cursor: move;
+    user-select: none;
+    /* 防止拖曳時選取到文字 */
+}
+
+/* 當視窗被點擊時，確保它跑到最前面 */
+.waypoint-popup.active-popup {
+    z-index: 2005;
+}
+
+/* ========================================
+   Custom Message Box (Replacement for Alert/Confirm)
+   ======================================== */
+.message-box-wrapper {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(0, 0, 0, 0.5);
+    /* 半透明遮罩 */
+    z-index: 9999;
+    /* 最頂層 */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    backdrop-filter: blur(2px);
+    /* 輕微模糊背景 */
+}
+
+.message-box-popup {
+    width: 400px;
+    max-width: 90%;
+    border-radius: 10px;
+    padding: 0 10px 0px 10px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+    display: flex;
+    flex-direction: column;
+    position: relative;
+}
+
+.message-box-popup .modal-header {
+    cursor: move;
+    /* 拖曳手勢 */
+}
+
+.message-box-popup .modal-body {
+    line-height: 1;
+    /* 收窄文字行高，預設通常是 1*/
+    font-size: 0.95rem;
+    /* 稍微調整字體大小讓排版更緊湊 */
+}
+
+/* 針對內容容器微調，減少預設的 margin */
+.message-box-popup .modal-body>div {
+    margin-bottom: 0px !important;
+    /* 覆蓋原本 mb-3 的大間距 */
+}
+
+/* 2. 按鈕置中 (Center Buttons) */
+.message-box-popup .modal-footer {
+    justify-content: center;
+    /* 覆蓋 Bootstrap 預設的 flex-end */
+    padding-top: 0.5rem;
+    padding-bottom: 1rem;
+}
+
+/* 3. 按鈕最小寬度 (Button Min-Width) */
+.message-box-popup .modal-footer .btn {
+    min-width: 70px;
+    /* 設定最小寬度，解決 "Yes" 按鈕太窄的問題 */
+    margin: 0 10px;
+    /* 增加按鈕之間的左右間距 */
+}
+
+/* ========================================
+   Map Notification & Input Highlight
+   ======================================== */
+
+/* 地圖上方的綠色半透明提示框 */
+.map-toast {
+    position: absolute;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: rgba(25, 135, 84, 0.85);
+    /* Bootstrap Success Green (Semi-transparent) */
+    color: white;
+    padding: 8px 20px;
+    border-radius: 20px;
+    /* 圓角膠囊狀 */
+    font-size: 0.9rem;
+    font-weight: 500;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+    z-index: 2000;
+    /* 確保在地圖控制項之上 */
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+    pointer-events: none;
+    /* 讓滑鼠可以穿透點擊地圖 */
+}
+
+.map-toast.show {
+    opacity: 1;
+    visibility: visible;
+}
+
+/* 輸入框高亮效果 (蓋過原本的 bg-dark) */
+@keyframes highlightFlow {
+    0% {
+        background-color: #198754;
+        /* 亮綠色 Start */
+        border-color: #198754;
+        color: #fff;
+        box-shadow: 0 0 15px rgba(25, 135, 84, 0.8);
+    }
+
+    20% {
+        background-color: #198754;
+        /* 維持一下綠色 */
+        transform: scale(1.02);
+        /* 輕微放大 */
+    }
+
+    100% {
+        background-color: #212529;
+        /* 變回深灰色 (Bootstrap Dark) */
+        border-color: #333333;
+        /* 變回邊框色 */
+        color: #e0e0e0;
+        /* 變回文字色 */
+        transform: scale(1);
+        box-shadow: none;
+    }
+}
+
+.input-highlight {
+    /* 因為移除了 bg-dark，這裡不需要 !important 也能生效 */
+    animation: highlightFlow 2.5s ease-out forwards;
+    z-index: 10;
+}
+
+/* ========================================
+   Custom Drawing Manager UI
+   ======================================== */
+
+/* Custom Toolbar */
+.custom-draw-toolbar {
+    background: var(--bg-panel);
+    border: 2px solid var(--border-color);
+    border-radius: 4px;
+    box-shadow: 0 1px 5px rgba(0, 0, 0, 0.4);
+    display: flex;
+    flex-direction: column;
+}
+
+.custom-draw-btn {
+    padding: 0;
+    width: 30px;
+    height: 30px;
+    line-height: 30px;
+    font-size: 1rem;
+
+    background: none;
+    border: none;
+    border-bottom: 1px solid var(--border-color);
+    color: var(--text-main);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+}
+
+.custom-draw-btn:last-child {
+    border-bottom: none;
+}
+
+.custom-draw-btn:hover {
+    background-color: var(--bg-input);
+    color: var(--primary-color);
+}
+
+.custom-draw-btn.active {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+/* Editing Handles (Control Points) */
+.vertex-handle {
+    background-color: white;
+    border: 2px solid #333;
+    border-radius: 4px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+    cursor: grab;
+}
+
+.vertex-handle:active {
+    cursor: grabbing;
+}
+
+/* Ghost Handles (Midpoints) */
+.ghost-handle {
+    background-color: white;
+    border: 1px solid #333;
+    border-radius: 4px;
+    opacity: 0.5;
+    cursor: pointer;
+}
+
+.ghost-handle:hover {
+    opacity: 1;
+    background-color: var(--accent-color);
+}
+
+/* Delete Button (X) */
+.delete-feature-btn {
+    background-color: var(--danger-color);
+    color: white;
+    border: 2px solid white;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-weight: bold;
+    font-size: 14px;
+    cursor: pointer;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+}
+
+.delete-feature-btn:hover {
+    transform: scale(1.1);
+}
+
+/* ========================================
+   Pure Custom Tooltip (No Leaflet Dependency)
+   ======================================== */
+#custom-map-tooltip {
+    position: absolute;
+    display: none;
+    /* 預設隱藏 */
+    background-color: rgba(30, 30, 30, 0.95);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    color: var(--text-main);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+    padding: 0;
+    font-size: 0.85rem;
+    font-family: Arial, sans-serif;
+    white-space: normal;
+    z-index: 9999;
+    /* 確保在所有地圖元素之上 */
+    pointer-events: none;
+    /* 讓滑鼠穿透，不干擾地圖操作 */
+    min-width: 220px;
+
+    /* 確保無動畫 */
+    transition: none !important;
+}
+
+/* Tooltip 內部排版 (沿用之前的設計) */
+#custom-map-tooltip .tooltip-header {
+    background-color: rgba(255, 255, 255, 0.05);
+    padding: 6px 10px;
+    border-bottom: 1px solid var(--border-color);
+    border-radius: 8px 8px 0 0;
+    font-weight: bold;
+    color: var(--primary-color);
+    display: flex;
+    align-items: center;
+}
+
+#custom-map-tooltip .tooltip-body {
+    padding: 8px 10px;
+}
+
+#custom-map-tooltip .tooltip-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 3px;
+    align-items: center;
+}
+
+#custom-map-tooltip .tooltip-label {
+    color: var(--text-muted);
+    margin-right: 15px;
+    font-size: 0.8rem;
+}
+
+#custom-map-tooltip .tooltip-value {
+    color: var(--text-main);
+    font-family: Arial, sans-serif;
+    font-weight: 500;
+}
+
+#custom-map-tooltip .tooltip-value.action-highlight {
+    color: var(--accent-color);
+}
+
+/* --- 動態箭頭 (CSS Arrow) --- */
+#custom-map-tooltip::after {
+    content: "";
+    position: absolute;
+    border-style: solid;
+    border-width: 6px;
+}
+
+/* Arrow: Top (Tooltip 在上方，箭頭向下) */
+#custom-map-tooltip[data-direction="top"]::after {
+    top: 100%;
+    /* 底部 */
+    left: 50%;
+    margin-left: -6px;
+    border-color: rgba(30, 30, 30, 0.95) transparent transparent transparent;
+}
+
+/* Arrow: Bottom (Tooltip 在下方，箭頭向上) */
+#custom-map-tooltip[data-direction="bottom"]::after {
+    bottom: 100%;
+    /* 頂部 */
+    left: 50%;
+    margin-left: -6px;
+    border-color: transparent transparent rgba(30, 30, 30, 0.95) transparent;
+}
+
+/* Arrow: Left (Tooltip 在左方，箭頭向右) */
+#custom-map-tooltip[data-direction="left"]::after {
+    left: 100%;
+    /* 右側 */
+    top: 50%;
+    margin-top: -6px;
+    border-color: transparent transparent transparent rgba(30, 30, 30, 0.95);
+}
+
+/* Arrow: Right (Tooltip 在右方，箭頭向左) */
+#custom-map-tooltip[data-direction="right"]::after {
+    right: 100%;
+    /* 左側 */
+    top: 50%;
+    margin-top: -6px;
+    border-color: transparent rgba(30, 30, 30, 0.95) transparent transparent;
+}
+
+/* ========================================
+   Photo Footprint Preview
+   ======================================== */
+.photo-footprint-preview {
+    stroke: #ffc107;
+    fill: #ffc107;
+    /* 黃色邊框 */
+    stroke-width: 2;
+    stroke-dasharray: 5, 5;
+    fill-opacity: 0.1;
+    /* 半透明填充 */
+    pointer-events: none;
+    /* 讓滑鼠可以穿透 */
+}
+
+/* ========================================
+   Leaflet Dark Mode Controls
+   ======================================== */
+
+/* Removing default white backgrounds and borders */
+.leaflet-bar,
+.leaflet-control-layers,
+.leaflet-control-zoom-in,
+.leaflet-control-zoom-out,
+.leaflet-popup-content-wrapper,
+.leaflet-popup-tip {
+    box-shadow: 0 1px 5px rgba(0, 0, 0, 0.4);
+    border: none;
+}
+
+.leaflet-bar a {
+    width: 30px !important;
+    height: 30px !important;
+    line-height: 30px !important;
+    font-size: 1rem;
+
+    background-color: var(--bg-panel);
+    border-bottom: 1px solid var(--border-color);
+    color: var(--text-main);
+
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    transition: all 0.2s ease;
+}
+
+.leaflet-bar a:hover {
+    background-color: var(--bg-input);
+    color: var(--primary-color);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.leaflet-bar a:last-child {
+    border-bottom: none;
+}
+
+/* Fix for zoom control text alignment since we used flex */
+.leaflet-control-zoom-in,
+.leaflet-control-zoom-out {
+    text-indent: 0 !important;
+    /* Remove leaflet default indent */
+    font-family: Arial, sans-serif !important;
+    /* Cleaner font for +/- */
+    font-weight: 300 !important;
+}
+
+/* Disabled state */
+.leaflet-bar a.leaflet-disabled {
+    cursor: default;
+    background-color: var(--bg-panel);
+    color: var(--text-muted);
+    opacity: 0.5;
+}
+
+/* Attribution Control */
+.leaflet-container .leaflet-control-attribution {
+    background-color: rgba(30, 30, 30, 0.85);
+    /* Semi-transparent dark */
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    padding: 2px 8px;
+    border-radius: 4px 0 0 0;
+    /* Corner rounding */
+    box-shadow: none;
+}
+
+.leaflet-container .leaflet-control-attribution a {
+    color: var(--primary-color);
+    text-decoration: none;
+}
+
+.leaflet-container .leaflet-control-attribution a:hover {
+    text-decoration: underline;
+}
+
+/* Darken standard popup if used (optional, since we have custom popups) */
+.leaflet-popup-content-wrapper,
+.leaflet-popup-tip {
+    background: var(--bg-panel);
+    color: var(--text-main);
+}
+
+/* Layers Control */
+.leaflet-control-layers {
+    background-color: var(--bg-panel);
+    color: var(--text-main);
+}
+
+.leaflet-control-layers-expanded {
+    padding: 6px 10px 6px 10px;
+    background-color: var(--bg-panel);
+    color: var(--text-main);
+}
+
+.leaflet-control-layers-scrollbar {
+    overflow-y: scroll;
+    padding-right: 5px;
+}
+
+/* Scrollbar within layers list */
+/* ========================================
+   New Editor Layout & Global Header Styles
+   (Ported from new styles.css for compatibility)
+   ======================================== */
+
+:root {
+    --global-header-height: 60px;
+    --editor-toolbar-height: 45px;
+}
+
+.global-header {
+    height: var(--global-header-height);
+    background-color: rgba(20, 20, 20, 0.95);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    display: flex;
+    align-items: center;
+    position: sticky;
+    top: 0;
+    z-index: 2000;
+    backdrop-filter: blur(10px);
+}
+
+.brand-logo {
+    font-weight: 700;
+    font-size: 1.3rem;
+    color: var(--text-main);
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    letter-spacing: 0.5px;
+}
+
+.brand-logo i {
+    color: var(--primary-color);
+    font-size: 1.4rem;
+    margin-right: 0.5rem;
+}
+
+.nav-link-custom {
+    color: var(--text-muted);
+    font-weight: 500;
+    padding: 0.5rem 1rem;
+    text-decoration: none;
+    transition: color 0.2s, background-color 0.2s;
+    border-radius: 6px;
+    font-size: 0.95rem;
+}
+
+.nav-link-custom:hover,
+.nav-link-custom.active {
+    color: var(--text-main);
+    background-color: rgba(255, 255, 255, 0.08);
+}
+
+.editor-toolbar {
+    height: var(--editor-toolbar-height);
+    background-color: var(--bg-panel);
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    padding: 0 1rem;
+    z-index: 100;
+}
+
+.editor-main {
+    height: calc(100vh - var(--global-header-height) - var(--editor-toolbar-height));
+    display: flex;
+    overflow: hidden;
+}
+
+.editor-sidebar {
+    width: var(--sidebar-width);
+    background-color: var(--bg-panel);
+    border-right: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    z-index: 900;
+    height: 100%;
+}
+
+.editor-map-container {
+    flex-grow: 1;
+    position: relative;
+    background-color: #1a1a1a;
+    height: 100%;
+}
+
+/* ========================================
+   New Features
+   ======================================== */
+.photo-footprint-preview.leaflet-interactive {
+    stroke: #ffc107;
+    fill: #ffc107;
+}
+
+.leaflet-control-layers-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.leaflet-control-layers-scrollbar::-webkit-scrollbar-thumb {
+    background: #444;
+    border-radius: 2px;
+}
+
+.leaflet-control-layers-separator {
+    border-top: 1px solid var(--border-color);
+    margin: 5px -10px 5px -10px;
+}
+
+.leaflet-control-layers-base,
+.leaflet-control-layers-overlays {
+    margin: 0;
+    padding: 0;
+}
+
+.leaflet-control-layers label {
+    display: flex;
+    /* Align checkbox and text */
+    align-items: center;
+    margin-bottom: 2px;
+    cursor: pointer;
+}
+
+.leaflet-control-layers label:hover {
+    background-color: var(--bg-input);
+    border-radius: 4px;
+}
+
+.leaflet-control-layers span {
+    margin-left: 5px;
+    /* Spacing between input and text */
+}
+
+/* Inputs (Checkbox/Radio) - ensuring they don't look out of place */
+.leaflet-control-layers input[type="radio"],
+.leaflet-control-layers input[type="checkbox"] {
+    accent-color: var(--primary-color);
+    margin: 0;
+    cursor: pointer;
+}

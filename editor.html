@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-bs-theme="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WaypointMap Editor</title>
+
+    <link rel="stylesheet" href="lib/leaflet/leaflet.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="editor.css">
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+</head>
+
+<body class="d-flex flex-column min-vh-100">
+
+    <!-- Global Header -->
+    <header class="global-header px-4">
+        <div class="container-fluid d-flex justify-content-between align-items-center">
+            <a href="index.html" class="brand-logo">
+                <i class="bi bi-airplane-engines-fill"></i>
+                WaypointMap <span class="badge bg-primary ms-2 fs-6 rounded-pill"
+                    style="font-size: 0.7rem !important; vertical-align: middle;">Editor</span>
+            </a>
+            <nav class="d-none d-md-flex align-items-center gap-3">
+                <a href="index.html" class="nav-link-custom">Home</a>
+                <a href="tutorial.html" class="nav-link-custom">Tutorial</a>
+                <!-- Back to Editor (Current) -->
+            </nav>
+        </div>
+    </header>
+
+    <!-- Editor Toolbar (Formerly Header) -->
+    <div class="editor-toolbar justify-content-between">
+        <div class="d-flex align-items-center">
+            <span class="text-muted small fw-bold text-uppercase ls-1">Project Tools</span>
+        </div>
+        <div class="d-flex gap-1" id="toolbar-actions">
+            <!-- Buttons moved here -->
+            <button id="undoBtn" class="btn btn-dark btn-xs" title="Undo (Ctrl+Z)"><i
+                    class="bi bi-arrow-counterclockwise"></i></button>
+            <button id="redoBtn" class="btn btn-dark btn-xs" title="Redo (Ctrl+Alt+Z)">
+                <i class="bi bi-arrow-clockwise"></i>
+            </button>
+            <div class="vr mx-1 bg-secondary opacity-25"></div>
+            <button id="resetBtn" class="btn btn-danger btn-xs" title="Reset All"><i class="bi bi-trash"></i></button>
+            <button id="helpBtn" class="btn btn-secondary btn-xs" title="Shortcuts"><i
+                    class="bi bi-keyboard"></i></button>
+        </div>
+    </div>
+
+    <!-- Main Content (Full Height - Headers) -->
+    <div class="editor-main" role="main">
+
+        <!-- Sidebar (Updated class) -->
+        <div class="editor-sidebar custom-scrollbar" id="sidebar">
+            <ul class="nav nav-pills nav-fill p-1 border-bottom border-secondary bg-panel" id="sideTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active btn-sm py-1" id="tab-advanced-btn" data-bs-toggle="tab"
+                        data-bs-target="#tab-advanced" type="button"><i class="bi bi-sliders me-1"></i>Settings</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link btn-sm py-1" id="tab-export-btn" data-bs-toggle="tab"
+                        data-bs-target="#tab-export" type="button"><i
+                            class="bi bi-box-arrow-up me-1"></i>Export</button>
+                </li>
+            </ul>
+
+            <div class="tab-content flex-grow-1 overflow-auto p-2 custom-scrollbar" id="tabContent">
+
+                <div class="tab-pane fade show active" id="tab-advanced" role="tabpanel">
+                    <form id="advancedForm" class="compact-form">
+
+                        <div class="section-title">Basic</div>
+                        <div class="bg-dark border border-secondary rounded p-2 mb-3">
+                            <div class="row g-1 mb-2">
+                                <div class="col-6">
+                                    <label class="form-label-xs">Drone Model</label>
+                                    <select id="droneModel"
+                                        class="form-select form-select-sm bg-dark text-light border-secondary">
+                                        <option value="" disabled selected>Select Drone</option>
+                                    </select>
+                                </div>
+
+                                <div class="col-6">
+                                    <label class="form-label-xs">Camera / Payload</label>
+                                    <select id="cameraModel"
+                                        class="form-select form-select-sm bg-dark text-light border-secondary" disabled>
+                                        <option value="">Select Model First</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="row g-1">
+                                <div class="col-4">
+                                    <label class="form-label-xs">Units</label>
+                                    <select id="units"
+                                        class="form-select form-select-sm bg-dark text-light border-secondary">
+                                        <option value="metric">Metric</option>
+                                        <option value="imperial">Imperial</option>
+                                    </select>
+                                </div>
+                                <div class="col-4">
+                                    <label class="form-label-xs">Alt (AGL)</label>
+                                    <div class="input-group input-group-sm">
+                                        <input type="number" id="altitude"
+                                            class="form-control bg-dark text-light border-secondary" value="90"
+                                            step="1">
+                                        <span
+                                            class="input-group-text bg-secondary text-light border-secondary unitsLabel">m</span>
+                                    </div>
+                                </div>
+                                <div class="col-4">
+                                    <label class="form-label-xs">Speed</label>
+                                    <div class="input-group input-group-sm">
+                                        <input type="number" id="speed"
+                                            class="form-control bg-dark text-light border-secondary" value="5.5"
+                                            step="0.5">
+                                        <span class="input-group-text bg-secondary text-light border-secondary"><span
+                                                class="unitsLabel">m</span>/s</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="section-title mt-3"><i class="bi bi-camera me-1"></i>Photogrammetry Auto-Calc</div>
+                        <div class="bg-dark border border-secondary rounded p-2 mb-3">
+                            <div class="row g-1">
+                                <div class="col-6 mt-1">
+                                    <label class="form-label-xs">Side Overlap %</label>
+                                    <input type="number" id="sideOverlap"
+                                        class="form-control form-control-sm bg-dark text-light border-secondary"
+                                        value="70" max="90" min="10">
+                                </div>
+                                <div class="col-6 mt-1">
+                                    <label class="form-label-xs">Front Overlap %</label>
+                                    <input type="number" id="frontOverlap"
+                                        class="form-control form-control-sm bg-dark text-light border-secondary"
+                                        value="80" max="90" min="10">
+                                </div>
+                                <div class="col-12 mt-2">
+                                    <div class="d-grid">
+                                        <button type="button" id="btnAutoCalc" class="btn btn-outline-info btn-sm"
+                                            disabled>
+                                            <i class="bi bi-calculator me-1"></i> Apply to Settings
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="col-12 mt-1 text-center">
+                                    <small class="text-muted" style="font-size: 0.7rem;">
+                                        GSD: <span id="gsdDisplay" class="text-light">-</span> <span
+                                            id="gsdUnit">cm/px</span> |
+                                        Footprint: <span id="footprintDisplay" class="text-light">-</span> <span
+                                            id="footprintUnit">m</span>
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="section-title mt-3">
+                            <i class="bi bi-camera-video me-1"></i> Camera & Action
+                        </div>
+                        <div class="bg-dark border border-secondary rounded p-2 mb-3">
+                            <div class="row g-2 mb-2">
+                                <div class="col-12">
+                                    <small class="text-secondary fw-bold text-uppercase"
+                                        style="font-size: 0.65rem;">Gimbal Tilt (Pitch)</small>
+                                </div>
+
+                                <div class="col-6">
+                                    <label class="form-label-xs text-info d-flex align-items-center"
+                                        title="Angle while flying between points">
+                                        <i class="bi bi-send me-1"></i> Cruising
+                                    </label>
+                                    <div class="input-group input-group-sm">
+                                        <input type="number" id="gimbalAngle"
+                                            class="form-control bg-dark text-light border-secondary" value="-90"
+                                            max="30" min="-90">
+                                        <span class="input-group-text bg-secondary border-secondary text-light">°</span>
+                                    </div>
+                                </div>
+
+                                <div class="col-6">
+                                    <label class="form-label-xs text-warning d-flex align-items-center"
+                                        title="Angle when performing action">
+                                        <i class="bi bi-bullseye me-1"></i> Shooting
+                                    </label>
+                                    <div class="input-group input-group-sm">
+                                        <input type="number" id="actionGimbalPitch"
+                                            class="form-control bg-dark text-light border-secondary" value="-75"
+                                            max="30" min="-90">
+                                        <span class="input-group-text bg-secondary border-secondary text-light">°</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <hr class="border-secondary my-2 opacity-50">
+
+                            <div class="row g-2">
+                                <div class="col-12">
+                                    <small class="text-secondary fw-bold text-uppercase"
+                                        style="font-size: 0.65rem;">Task & Orientation</small>
+                                </div>
+
+                                <div class="col-8">
+                                    <label class="form-label-xs">Action Type</label>
+                                    <select id="action"
+                                        class="form-select form-select-sm bg-dark text-light border-secondary">
+                                        <option value="noAction" class="text-muted">No Action</option>
+                                        <option value="takePhoto">Take Photo</option>
+                                        <option value="startRecord">Start Recording</option>
+                                        <option value="stopRecord">Stop Recording</option>
+                                        <option value="gimbalRotate">Rotate Gimbal Only</option>
+                                    </select>
+                                </div>
+
+                                <div class="col-4">
+                                    <label class="form-label-xs">Interval</label>
+                                    <div class="input-group input-group-sm">
+                                        <input type="number" id="interval"
+                                            class="form-control bg-dark text-light border-secondary" value="3"
+                                            step="0.5">
+                                        <span
+                                            class="input-group-text bg-secondary border-secondary text-light px-1">s</span>
+                                    </div>
+                                </div>
+
+                                <div class="col-12 mt-1">
+                                    <label class="form-label-xs">Aircraft Heading</label>
+                                    <div class="input-group input-group-sm">
+                                        <select id="headingMode" class="form-select bg-dark text-light border-secondary"
+                                            style="flex: 1.5;">
+                                            <option value="auto">Auto (Course)</option>
+                                            <option value="fixed">Fixed Angle</option>
+                                        </select>
+                                        <div id="headingInputDiv" style="display:none; flex: 1;">
+                                            <input type="number" id="headingAngle"
+                                                class="form-control bg-dark text-light border-secondary border-start-0"
+                                                value="0" placeholder="Deg">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="section-title mt-3">Flight Path</div>
+                        <div class="bg-dark border border-secondary rounded p-2 mb-3">
+                            <div class="row g-1 mb-2">
+                                <div class="col-6">
+                                    <label class="form-label-xs">Spacing</label>
+                                    <div class="input-group input-group-sm">
+                                        <input type="number" id="spacing"
+                                            class="form-control bg-dark text-light border-secondary" value="50"
+                                            step="1">
+                                        <span
+                                            class="input-group-text bg-secondary text-light border-secondary unitsLabel">m</span>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <label class="form-label-xs">Direction</label>
+                                    <select id="lineDirection"
+                                        class="form-select form-select-sm bg-dark text-light border-secondary">
+                                        <option value="auto">Auto (Shortest)</option>
+                                        <option value="ew">East-West</option>
+                                        <option value="ns">North-South</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <hr class="border-secondary my-2 opacity-50">
+
+                            <div class="mb-2">
+                                <label class="form-label-xs">Turn Mode</label>
+                                <select id="turnMode"
+                                    class="form-select form-select-sm bg-dark text-light border-secondary"
+                                    data-bs-toggle="tooltip" title="Defines how drone handles corners">
+                                    <option value="toPointAndStopWithContinuityCurvature" selected>Curved Stop
+                                        (Default)
+                                    </option>
+                                    <option value="coordinateTurn">Coordinate Turn (Fast)</option>
+                                    <option value="toPointAndStopWithDiscontinuityCurvature">Straight Stop (Sharp)
+                                    </option>
+                                    <option value="toPointAndPassWithContinuityCurvature">Curved Pass (Smooth)
+                                    </option>
+                                </select>
+                                <div id="turnModeHelp" class="text-secondary"
+                                    style="font-size: 0.7rem; margin-top: 2px;">
+                                    Curved entry, stop at point.</div>
+                            </div>
+
+                            <div class="mb-2">
+                                <label class="form-label-xs">Finish Action</label>
+                                <select id="finalAction"
+                                    class="form-select form-select-sm bg-dark text-light border-secondary">
+                                    <option value="return">Return to Home</option>
+                                    <option value="hover">Hover</option>
+                                    <option value="land">Auto Land</option>
+                                </select>
+                            </div>
+
+                            <div class="form-check form-switch form-check-sm">
+                                <input type="checkbox" id="maintainAltitude" class="form-check-input">
+                                <label class="form-check-label small text-light" for="maintainAltitude">Terrain
+                                    Follow</label>
+                            </div>
+                            <div class="form-check form-switch form-check-sm mb-3">
+                                <input type="checkbox" id="reversePath" class="form-check-input">
+                                <label class="form-check-label small text-light" for="reversePath">Reverse
+                                    Path</label>
+                            </div>
+
+                            <button type="button" id="generateFromAdvanced"
+                                class="btn btn-success btn-sm w-100 fw-bold">
+                                <i class="bi bi-bezier2 me-1"></i> Generate Waypoints
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="tab-pane fade" id="tab-export" role="tabpanel">
+                    <div class="compact-form">
+                        <div class="section-title">Mission Info</div>
+                        <div class="bg-dark border border-secondary rounded p-2 mb-3">
+                            <div class="d-flex justify-content-between mb-1">
+                                <span class="text-secondary small">Count:</span>
+                                <span class="text-light fw-bold small" id="wpCount">0</span>
+                            </div>
+                            <div class="d-flex justify-content-between mb-1">
+                                <span class="text-secondary small">Dist:</span>
+                                <span class="text-info fw-bold small" id="totalDist">0 m</span>
+                            </div>
+                            <div class="d-flex justify-content-between">
+                                <span class="text-secondary small">Time:</span>
+                                <span class="text-warning fw-bold small" id="etaTime">0 s</span>
+                            </div>
+                        </div>
+
+
+
+                        <div class="mb-3">
+                            <label class="form-label-xs">Mission Name</label>
+                            <input type="text" id="missionName"
+                                class="form-control form-control-sm bg-dark text-light border-secondary"
+                                value="DJI_Mission">
+                        </div>
+
+                        <div class="alert alert-warning py-1 px-2 small mb-3 d-flex align-items-center"
+                            id="waypointWarning" style="display:none; font-size: 0.75rem;">
+                            <i class="bi bi-exclamation-triangle-fill me-2"></i> >100 WPs may lag controller.
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            <button id="downloadKmz" class="btn btn-primary btn-sm" disabled>
+                                <i class="bi bi-download me-1"></i> Download KMZ (Pilot 2)
+                            </button>
+                            <button id="downloadJson" class="btn btn-outline-secondary btn-sm" disabled>
+                                <i class="bi bi-file-code me-1"></i> JSON Debug
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Map Container -->
+        <div class="editor-map-container" id="map-container">
+            <div id="mapToast" class="map-toast">Calculation successful</div>
+            <div id="map" class="h-100 w-100"></div>
+        </div>
+
+    </div>
+    <!-- End editor-main -->
+
+    <div class="modal fade" id="helpModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+            <div class="modal-content bg-dark text-light border-secondary">
+                <div class="modal-header border-secondary py-2">
+                    <h6 class="modal-title">Shortcuts</h6>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body small p-3">
+                    <div class="d-flex justify-content-between mb-1"><span>Polygon</span> <kbd
+                            class="bg-secondary">Ctrl+1</kbd></div>
+                    <div class="d-flex justify-content-between mb-1"><span>Rectangle</span> <kbd
+                            class="bg-secondary">Ctrl+2</kbd></div>
+                    <div class="d-flex justify-content-between mb-1"><span>Circle</span> <kbd
+                            class="bg-secondary">Ctrl+3</kbd></div>
+                    <hr class="border-secondary my-2">
+                    <div class="d-flex justify-content-between mb-1"><span>Undo</span> <kbd
+                            class="bg-secondary">Ctrl+Z</kbd></div>
+                    <div class="d-flex justify-content-between"><span>Redo</span> <kbd
+                            class="bg-secondary">Ctrl+Alt+Z</kbd>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="lib/leaflet/leaflet-src.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script src="history.js"></script>
+    <script src="kmz-generator.js"></script>
+    <script src="drone-specs.js"></script>
+    <script src="waypoint-popup.js"></script>
+    <script src="message-box.js"></script>
+    <script src="drawing-manager.js"></script>
+    <script src="app.js"></script>
+</body>
+
+</html>

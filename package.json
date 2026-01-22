@@ -1,0 +1,31 @@
+{
+    "name": "waypoint-editor",
+    "version": "1.0.0",
+    "description": "Waypoint Editor Desktop App",
+    "main": "main.js",
+    "scripts": {
+        "start": "electron .",
+        "build": "electron-packager . --overwrite --platform=win32 --arch=x64 --prune=true --out=release-builds-v2"
+    },
+    "keywords": [],
+    "author": "Waypoint User",
+    "license": "ISC",
+    "devDependencies": {
+        "electron": "^33.4.11",
+        "electron-builder": "^24.13.3",
+        "electron-packager": "^17.1.2"
+    },
+    "build": {
+        "appId": "com.waypoint.editor",
+        "win": {
+            "target": "nsis"
+        },
+        "files": [
+            "**/*",
+            "!dist/**/*",
+            "!node_modules/**/*",
+            "!Waypoint-API/**/*",
+            "!.git/**/*"
+        ]
+    }
+}

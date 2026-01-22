@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Waypoint - Precision Mission Planning</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        /* Landing Page Specific Overrides usually go here or styles.css */
+    </style>
+</head>
+
+<body>
+
+    <!-- Global Header -->
+    <header class="global-header">
+        <div class="container d-flex justify-content-between align-items-center">
+            <a href="index.html" class="brand-logo">
+                <i class="bi bi-pentagon-half"></i> WAYPOINT
+            </a>
+            <nav cla ss="d-none d-md-flex gap-3">
+                <a href="index.html" class="nav-link-custom active">Features</a>
+                <a href="tutorial.html" class="nav-link-custom">Tutorial</a>
+                <!-- Removed GitHub Link as requested -->
+            </nav>
+            <a href="editor.html" class="btn btn-editor-launch">
+                <i class="bi bi-rocket-takeoff-fill me-2"></i>Launch Editor
+            </a>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero-section">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-lg-6 hero-content">
+                    <h1 class="hero-title">Precision Mission Planning Reimagined</h1>
+                    <p class="hero-subtitle">
+                        Advanced photogrammetry tools for professional drone pilots.
+                        Calculate GSD, overlap, and flight paths with ease. Import/Export standard formats instantly.
+                    </p>
+                    <div class="d-flex gap-3">
+                        <a href="editor.html" class="btn btn-lg btn-primary px-4 py-3 rounded-pill shadow-lg">
+                            Start Planning Now
+                        </a>
+                        <a href="tutorial.html" class="btn btn-lg btn-outline-light px-4 py-3 rounded-pill">
+                            View Tutorial
+                        </a>
+                    </div>
+                </div>
+                <div class="col-lg-6 d-none d-lg-block">
+                    <!-- Real Map Visualization -->
+                    <div class="hero-visual-container">
+                        <!-- 1. Background (Dark Map + Terrain) -->
+                        <div class="map-terrain"></div>
+
+                        <!-- 2. SVG Overlay -->
+                        <svg class="map-svg-layer" viewBox="0 0 400 300" preserveAspectRatio="xMidYMid slice">
+                            <g transform="translate(0, 35)">
+                                <!-- Polygon (Survey Area) -->
+                                <polygon points="55,130 90,25 340,88 305,193" class="real-polygon" />
+
+                                <!-- Footprint Projection (Under Waypoint 5) -->
+                                <polygon points="98,103 138,118 123,158 83,143" class="real-footprint" />
+
+                                <!-- Flight Path (Complex Lawn-mower) -->
+                                <path
+                                    d="M70,120 L100,40 L120,45 L90,125 L110,130 L140,50 L160,55 L130,135 L150,140 L180,60 L200,65 L170,145 L190,150 L220,70 L240,75 L210,155 L230,160 L260,80 L280,85 L250,165 L270,170 L300,90 L320,95 L290,175"
+                                    class="real-flight-path" />
+
+                                <!-- Waypoints with Numbers (Corrected 1-24) -->
+                                <g class="real-wp-group" transform="translate(70, 120)">
+                                    <circle r="8" class="real-wp-circle" />
+                                    <text y="0.5" class="real-wp-text">1</text>
+                                </g>
+                                <g class="real-wp-group" transform="translate(100, 40)">
+                                    <circle r="8" class="real-wp-circle" />
+                                    <text y="0.5" class="real-wp-text">2</text>
+                                </g>
+                                <g class="real-wp-group" transform="translate(120, 45)">
+                                    <circle r="8" class="real-wp-circle" />
+                                    <text y="0.5" class="real-wp-text">3</text>
+                                </g>
+                                <g class="real-wp-group" transform="translate(90, 125)">
+                                    <circle r="8" class="real-wp-circle" />
+                                    <text y="0.5" class="real-wp-text">4</text>
+                                </g>
+
+                                <!-- Active Waypoint 5 -->
+                                <g class="real-wp-group" transform="translate(110, 130)">
+                                    <!-- Arrow indicating heading -->
+                                    <polygon points="0,-16 -6,8 0,4 6,8" fill="#00d68f" transform="rotate(20)" />
+                                    <circle r="9" class="real-wp-circle" stroke="#fff" stroke-width="2" />
+                                    <text y="0.5" class="real-wp-text" style="font-size: 10px;">5</text>
+                                </g>
+
+                                <g class="real-wp-group" transform="translate(140, 50)">
+                                    <circle r="8" class="real-wp-circle" />
+                                    <text y="0.5" class="real-wp-text">6</text>
+                                </g>
+                                <g class="real-wp-group" transform="translate(160, 55)">
+                                    <circle r="8" class="real-wp-circle" />
+                                    <text y="0.5" class="real-wp-text">7</text>
+                                </g>
+                                <g class="real-wp-group" transform="translate(130, 135)">
+                                    <circle r="8" class="real-wp-circle" />
+                                    <text y="0.5" class="real-wp-text">8</text>
+                                </g>
+                                <g class="real-wp-group" transform="translate(150, 140)">
+                                    <circle r="8" class="real-wp-circle" />
+                                    <text y="0.5" class="real-wp-text">9</text>
+                                </g>
+                                <g class="real-wp-group" transform="translate(180, 60)">
+                                    <circle r="8" class="real-wp-circle" />
+                                    <text y="0.5" class="real-wp-text">10</text>
+                                </g>
+                                <g class="real-wp-group" transform="translate(200, 65)">
+                                    <circle r="8" class="real-wp-circle" />
+                                    <text y="0.5" class="real-wp-text">11</text>
+                                </g>
+                                <g class="real-wp-group" transform="translate(170, 145)">
+                                    <circle r="8" class="real-wp-circle" />
+                                    <text y="0.5" class="real-wp-text">12</text>
+                                </g>
+                                <g class="real-wp-group" transform="translate(190, 150)">
+                                    <circle r="8" class="real-wp-circle" />
+                                    <text y="0.5" class="real-wp-text">13</text>
+                                </g>
+                                <g class="real-wp-group" transform="translate(220, 70)">
+                                    <circle r="8" class="real-wp-circle" />
+                                    <text y="0.5" class="real-wp-text">14</text>
+                                </g>
+                                <g class="real-wp-group" transform="translate(240, 75)">
+                                    <circle r="8" class="real-wp-circle" />
+                                    <text y="0.5" class="real-wp-text">15</text>
+                                </g>
+                                <g class="real-wp-group" transform="translate(210, 155)">
+                                    <circle r="8" class="real-wp-circle" />
+                                    <text y="0.5" class="real-wp-text">16</text>
+                                </g>
+                                <g class="real-wp-group" transform="translate(230, 160)">
+                                    <circle r="8" class="real-wp-circle" />
+                                    <text y="0.5" class="real-wp-text">17</text>
+                                </g>
+                                <g class="real-wp-group" transform="translate(260, 80)">
+                                    <circle r="8" class="real-wp-circle" />
+                                    <text y="0.5" class="real-wp-text">18</text>
+                                </g>
+                                <g class="real-wp-group" transform="translate(280, 85)">
+                                    <circle r="8" class="real-wp-circle" />
+                                    <text y="0.5" class="real-wp-text">19</text>
+                                </g>
+                                <g class="real-wp-group" transform="translate(250, 165)">
+                                    <circle r="8" class="real-wp-circle" />
+                                    <text y="0.5" class="real-wp-text">20</text>
+                                </g>
+                                <g class="real-wp-group" transform="translate(270, 170)">
+                                    <circle r="8" class="real-wp-circle" />
+                                    <text y="0.5" class="real-wp-text">21</text>
+                                </g>
+                                <g class="real-wp-group" transform="translate(300, 90)">
+                                    <circle r="8" class="real-wp-circle" />
+                                    <text y="0.5" class="real-wp-text">22</text>
+                                </g>
+                                <g class="real-wp-group" transform="translate(320, 95)">
+                                    <circle r="8" class="real-wp-circle" />
+                                    <text y="0.5" class="real-wp-text">23</text>
+                                </g>
+                                <g class="real-wp-group" transform="translate(290, 175)">
+                                    <circle r="8" class="real-wp-circle" />
+                                    <text y="0.5" class="real-wp-text">24</text>
+                                </g>
+                            </g>
+                        </svg>
+
+                        <!-- 3. Detailed Tooltip -->
+                        <div class="hero-tooltip">
+                            <div class="hero-tooltip-header">
+                                <i class="bi bi-geo-alt-fill me-2"></i> Waypoint 5
+                            </div>
+                            <div class="hero-tooltip-body">
+                                <div class="ht-row">
+                                    <span class="ht-label">Lat</span>
+                                    <span class="ht-value">22.3808175</span>
+                                </div>
+                                <div class="ht-row">
+                                    <span class="ht-label">Lng</span>
+                                    <span class="ht-value">114.1036094</span>
+                                </div>
+                                <div class="ht-row mt-2">
+                                    <span class="ht-label">Alt</span>
+                                    <span class="ht-value">90 m</span>
+                                </div>
+                                <div class="ht-row">
+                                    <span class="ht-label">Speed</span>
+                                    <span class="ht-value">5.5 m/s</span>
+                                </div>
+                                <div class="ht-row border-top border-secondary pt-1 mt-1">
+                                    <span class="ht-label"><i class="bi bi-send me-1"></i>Cruising</span>
+                                    <span class="ht-value ht-highlight">-90°</span>
+                                </div>
+                                <div class="ht-row">
+                                    <span class="ht-label"><i class="bi bi-camera-fill me-1"></i>Action</span>
+                                    <span class="ht-value ht-gold">Take Photo</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="section-padding bg-dark">
+        <div class="container">
+            <div class="text-center mb-5">
+                <h2 class="fw-bold text-white">Why Waypoint?</h2>
+                <p class="text-muted">Designed for efficiency and precision.</p>
+            </div>
+            <div class="row g-4">
+                <div class="col-md-4">
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <i class="bi bi-calculator-fill"></i>
+                        </div>
+                        <h4 class="text-white mb-3">Auto-Calc Photogrammetry</h4>
+                        <p class="text-muted">
+                            Simply define your area. We automatically calculate optimal flight paths based on your
+                            camera
+                            parameters, GSD, and overlap requirements.
+                        </p>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <i class="bi bi-file-earmark-code-fill"></i>
+                        </div>
+                        <h4 class="text-white mb-3">Native KMZ Export</h4>
+                        <p class="text-muted">
+                            Seamlessly export your mission plans to DJI Pilot 2 compatible KMZ files. No complex
+                            conversions needed.
+                        </p>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <i class="bi bi-bezier2"></i>
+                        </div>
+                        <h4 class="text-white mb-3">Advanced Path Logic</h4>
+                        <p class="text-muted">
+                            Intelligent path generation minimizes flight time while ensuring full coverage. Supports
+                            custom turn modes and speed adjustments.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Global Footer -->
+    <footer class="global-footer">
+        <div class="container text-center">
+            <div class="mb-3">
+                <a href="#" class="brand-logo justify-content-center mb-2">
+                    <i class="bi bi-pentagon-half"></i> WAYPOINT
+                </a>
+                <p class="small">Precision Drone Mission Planning</p>
+            </div>
+            <div class="mb-4">
+                <a href="#" class="footer-link">Privacy Policy</a>
+                <a href="#" class="footer-link">Terms of Service</a>
+                <a href="#" class="footer-link">Support</a>
+            </div>
+            <p class="small mb-0">&copy; 2023 Waypoint. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <!-- Bootstrap JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+
+</html>

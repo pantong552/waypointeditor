@@ -1,0 +1,19 @@
+{
+    "version": 2,
+    "builds": [
+        {
+            "src": "api/*.js",
+            "use": "@vercel/node"
+        }
+    ],
+    "routes": [
+        {
+            "src": "/api/generate-kmz",
+            "dest": "/api/generate-kmz.js"
+        },
+        {
+            "src": "/(.*)",
+            "dest": "/api/calculate.js"
+        }
+    ]
+}
