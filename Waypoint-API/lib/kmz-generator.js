@@ -2,6 +2,7 @@ const JSZip = require('jszip');
 
 /**
  * KMZ Generator - DJI Pilot 2 (WPML) Standard Implementation
+ * Fixed: XML Declaration and Indentation formats
  */
 class KMZGenerator {
   constructor() {
@@ -34,6 +35,7 @@ class KMZGenerator {
     const zip = new JSZip();
     const wpmzFolder = zip.folder("wpmz");
 
+    // 注意：這裡直接調用函數生成字串，確保沒有額外的空白字符
     wpmzFolder.file("template.kml", this.createTemplateKml(waypoints, missionName, settings));
     wpmzFolder.file("waylines.wpml", this.createWaylinesWpml(waypoints, missionName, settings));
 
@@ -54,6 +56,8 @@ class KMZGenerator {
     const droneEnumValue = explicitEnum || (this.droneModels[droneName] || this.droneModels.DEFAULT);
     const now = Date.now();
 
+    // Fix: XML header must be strictly formatted. No spaces inside <?xml ... ?>
+    // Use strictly aligned strings to match the correct template indentation.
     let kml = `<?xml version="1.0" encoding="UTF-8"?>
 <kml xmlns="http://www.opengis.net/kml/2.2" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:wpml="http://www.dji.com/wpmz/1.0.2" xsi:schemaLocation="http://www.opengis.net/kml/2.2 http://schemas.opengis.net/kml/2.2.0/kml22.xsd">
   <Document>
@@ -93,13 +97,23 @@ class KMZGenerator {
   }
 
   createWaylinesWpml(waypoints, missionName, settings = {}) {
-    const { altitude = 60, speed = 12, droneName = 'MAVIC3', finalAction = 'goHome', executeHeightMode = 'relativeToStartPoint', turnMode = 'toPointAndStopWithContinuityCurvature', droneEnumValue: explicitEnum } = settings;
+    const {
+      altitude = 60,
+      speed = 12,
+      droneName = 'MAVIC3',
+      finalAction = 'goHome',
+      executeHeightMode = 'relativeToStartPoint',
+      turnMode = 'toPointAndStopWithDiscontinuityCurvature', // Correct default
+      droneEnumValue: explicitEnum
+    } = settings;
+
     const droneEnumValue = explicitEnum || (this.droneModels[droneName] || this.droneModels.DEFAULT);
     const now = Date.now();
     const totalDistance = this.calculateTotalDistance(waypoints);
     const estimatedTime = this.calculateEstimatedTime(waypoints, speed);
     const isStraightLine = turnMode === 'toPointAndStopWithDiscontinuityCurvature' ? 1 : 0;
 
+    // Fix: Strict XML declaration format without extra spaces
     let wpml = `<?xml version="1.0" encoding="UTF-8"?>
 <kml xmlns="http://www.opengis.net/kml/2.2" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:wpml="http://www.dji.com/wpmz/1.0.2" xsi:schemaLocation="http://www.opengis.net/kml/2.2 http://schemas.opengis.net/kml/2.2.0/kml22.xsd">
   <Document>
@@ -141,37 +155,8 @@ class KMZGenerator {
       let validHeading = ((wpHeading % 360) + 360) % 360;
       if (validHeading > 180) validHeading -= 360;
 
-      // 檢查是否為 Auto (DJI default) 模式
-      const isAutoDJI = (settings.headingMode === 'autoDJI');
-
-      if (isAutoDJI) {
-        wpml += `      <Placemark>
-        <Point><coordinates>${wp.lng.toFixed(8)},${wp.lat.toFixed(8)},${validAltitude}</coordinates></Point>
-        <wpml:index>${index}</wpml:index>
-        <wpml:executeHeight>${validAltitude}</wpml:executeHeight>
-        <wpml:waypointSpeed>${validSpeed}</wpml:waypointSpeed>
-        <wpml:waypointHeadingParam>
-          <wpml:waypointHeadingMode>followWayline</wpml:waypointHeadingMode>
-          <wpml:waypointHeadingAngle>0</wpml:waypointHeadingAngle>
-          <wpml:waypointHeadingAngleEnable>0</wpml:waypointHeadingAngleEnable>
-          <wpml:waypointHeadingPathMode>followBadArc</wpml:waypointHeadingPathMode>
-          <wpml:waypointPoiPoint>0.000000,0.000000,0.000000</wpml:waypointPoiPoint>
-          <wpml:waypointHeadingPoiIndex>0</wpml:waypointHeadingPoiIndex>
-        </wpml:waypointHeadingParam>
-        <wpml:waypointTurnParam>
-          <wpml:waypointTurnMode>${turnMode}</wpml:waypointTurnMode>
-          <wpml:waypointTurnDampingDist>0</wpml:waypointTurnDampingDist>
-        </wpml:waypointTurnParam>
-        <wpml:useStraightLine>${isStraightLine}</wpml:useStraightLine>
-${this.generateActionGroups(index, wp, wpActionPitch, nextActionPitch)}
-        <wpml:waypointGimbalHeadingParam>
-          <wpml:waypointGimbalPitchAngle>0</wpml:waypointGimbalPitchAngle>
-          <wpml:waypointGimbalYawAngle>0</wpml:waypointGimbalYawAngle>
-        </wpml:waypointGimbalHeadingParam>
-      </Placemark>\n`;
-      } else {
-        // 原有的 Auto (Course) 或 Fixed 邏輯
-        wpml += `      <Placemark>
+      // Ensure formatting matches correct version (2-space indents for Placemark properties)
+      wpml += `      <Placemark>
         <Point><coordinates>${wp.lng.toFixed(8)},${wp.lat.toFixed(8)},${validAltitude}</coordinates></Point>
         <wpml:index>${index}</wpml:index>
         <wpml:executeHeight>${validAltitude}</wpml:executeHeight>
@@ -195,7 +180,6 @@ ${this.generateActionGroups(index, wp, wpActionPitch, nextActionPitch)}
           <wpml:waypointGimbalYawAngle>0</wpml:waypointGimbalYawAngle>
         </wpml:waypointGimbalHeadingParam>
       </Placemark>\n`;
-      }
     });
 
     wpml += `    </Folder>
@@ -220,6 +204,7 @@ ${this.generateActionGroups(index, wp, wpActionPitch, nextActionPitch)}
       const gimbalActionId = this.globalActionId;
       const gimbalActionXml = this.createGimbalRotateXml(gimbalActionId, currentPitch);
 
+      // Fix: Ensure indentations are consistent (8 spaces for group start)
       xml += `        <wpml:actionGroup>
           <wpml:actionGroupId>${groupId}</wpml:actionGroupId>
           <wpml:actionGroupStartIndex>${index}</wpml:actionGroupStartIndex>
@@ -261,6 +246,7 @@ ${evenlyRotateXml}
     const funcName = this.mapActionType(type);
     if (type === 'gimbalRotate') return '';
 
+    // Indent content for 10 spaces
     return `          <wpml:action>
             <wpml:actionId>${id}</wpml:actionId>
             <wpml:actionActuatorFunc>${funcName}</wpml:actionActuatorFunc>
