@@ -450,6 +450,7 @@ class DrawingManager {
 
         points.forEach((latlng, index) => {
             const handle = this.createHandle(latlng, 'vertex-handle');
+            handle.index = index; // Important for syncing during body drag
 
             handle.on('drag', (e) => {
                 L.DomEvent.stopPropagation(e);
@@ -512,6 +513,11 @@ class DrawingManager {
             ghost.on('dragend', () => this.renderHandles(layer, type));
             this.editHandlesLayer.addLayer(ghost);
         }
+
+        // Enable body drag for Polygon/Polyline
+        this.makeDraggable(layer, vertexHandles);
+
+        this.renderDeleteButton(layer);
     }
 
     renderRectangleHandles(layer) {
@@ -643,7 +649,7 @@ class DrawingManager {
                 });
                 layer.setLatLngs(newLatLngs);
 
-                // Sync handles
+                // Sync vertex handles
                 if (handles.length > 0) {
                     const flatPoints = newLatLngs[0];
                     handles.forEach((h) => {
@@ -651,6 +657,36 @@ class DrawingManager {
                             h.setLatLng(flatPoints[h.index]);
                         }
                     });
+                }
+
+                // Update Ghost Handles for Polygon/Polyline
+                if (this.editingType === 'polygon' || this.editingType === 'polyline') {
+                    const points = newLatLngs[0];
+                    const ghostHandles = [];
+
+                    // Collect all ghost handles
+                    this.editHandlesLayer.eachLayer((handleLayer) => {
+                        if (handleLayer.getElement && handleLayer.getElement().classList.contains('ghost-handle')) {
+                            ghostHandles.push(handleLayer);
+                        }
+                    });
+
+                    // Update ghost handle positions
+                    let ghostIndex = 0;
+                    for (let i = 0; i < points.length; i++) {
+                        const nextIdx = (i + 1) % points.length;
+                        if (this.editingType === 'polyline' && i === points.length - 1) break;
+
+                        const p1 = points[i];
+                        const p2 = points[nextIdx];
+                        const midLat = (p1.lat + p2.lat) / 2;
+                        const midLng = (p1.lng + p2.lng) / 2;
+
+                        if (ghostHandles[ghostIndex]) {
+                            ghostHandles[ghostIndex].setLatLng([midLat, midLng]);
+                            ghostIndex++;
+                        }
+                    }
                 }
 
             } else if (layer instanceof L.Circle) {
@@ -687,6 +723,13 @@ class DrawingManager {
                 isDragging = false;
                 startPoint = null;
                 this.map.dragging.enable();
+
+                // Re-render handles to update Ghost Handle positions
+                if (this.editingLayer && this.editingType) {
+                    this.editHandlesLayer.clearLayers();
+                    this.renderHandles(this.editingLayer, this.editingType);
+                }
+
                 this.app.saveState();
             }
         });
