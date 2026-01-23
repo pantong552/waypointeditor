@@ -2,7 +2,6 @@ const JSZip = require('jszip');
 
 /**
  * KMZ Generator - DJI Pilot 2 (WPML) Standard Implementation
- * Fixed: XML Declaration and Indentation formats
  */
 class KMZGenerator {
   constructor() {
@@ -35,7 +34,6 @@ class KMZGenerator {
     const zip = new JSZip();
     const wpmzFolder = zip.folder("wpmz");
 
-    // 注意：這裡直接調用函數生成字串，確保沒有額外的空白字符
     wpmzFolder.file("template.kml", this.createTemplateKml(waypoints, missionName, settings));
     wpmzFolder.file("waylines.wpml", this.createWaylinesWpml(waypoints, missionName, settings));
 
@@ -56,8 +54,6 @@ class KMZGenerator {
     const droneEnumValue = explicitEnum || (this.droneModels[droneName] || this.droneModels.DEFAULT);
     const now = Date.now();
 
-    // Fix: XML header must be strictly formatted. No spaces inside <?xml ... ?>
-    // Use strictly aligned strings to match the correct template indentation.
     let kml = `<?xml version="1.0" encoding="UTF-8"?>
 <kml xmlns="http://www.opengis.net/kml/2.2" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:wpml="http://www.dji.com/wpmz/1.0.2" xsi:schemaLocation="http://www.opengis.net/kml/2.2 http://schemas.opengis.net/kml/2.2.0/kml22.xsd">
   <Document>
@@ -71,27 +67,13 @@ class KMZGenerator {
       <wpml:exitOnRCLost>executeLostAction</wpml:exitOnRCLost>
       <wpml:executeRCLostAction>hover</wpml:executeRCLostAction>
       <wpml:globalTransitionalSpeed>${Math.max(1, Math.min(15, speed))}</wpml:globalTransitionalSpeed>
-      <wpml:droneInfo>
+    <wpml:droneInfo>
         <wpml:droneEnumValue>${droneEnumValue}</wpml:droneEnumValue>
         <wpml:droneSubEnumValue>0</wpml:droneSubEnumValue>
       </wpml:droneInfo>
     </wpml:missionConfig>
-    <Folder>
-      <name>Waypoints</name>
-      <wpml:templateId>0</wpml:templateId>
-      <wpml:waylineId>0</wpml:waylineId>
-      <wpml:autoFlightSpeed>${speed}</wpml:autoFlightSpeed>
-      <wpml:executeHeightMode>relativeToStartPoint</wpml:executeHeightMode>
 `;
-    waypoints.forEach((wp, index) => {
-      kml += `      <Placemark>
-        <name>Waypoint ${index}</name>
-        <Point><coordinates>${wp.lng.toFixed(8)},${wp.lat.toFixed(8)},${wp.altitude || 60}</coordinates></Point>
-        <wpml:index>${index}</wpml:index>
-      </Placemark>\n`;
-    });
-    kml += `    </Folder>
-  </Document>
+    kml += `  </Document>
 </kml>`;
     return kml;
   }
@@ -113,32 +95,31 @@ class KMZGenerator {
     const estimatedTime = this.calculateEstimatedTime(waypoints, speed);
     const isStraightLine = turnMode === 'toPointAndStopWithDiscontinuityCurvature' ? 1 : 0;
 
-    // Fix: Strict XML declaration format without extra spaces
     let wpml = `<?xml version="1.0" encoding="UTF-8"?>
-<kml xmlns="http://www.opengis.net/kml/2.2" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:wpml="http://www.dji.com/wpmz/1.0.2" xsi:schemaLocation="http://www.opengis.net/kml/2.2 http://schemas.opengis.net/kml/2.2.0/kml22.xsd">
-  <Document>
-    <wpml:author>WaypointMap</wpml:author>
-    <wpml:createTime>${now}</wpml:createTime>
-    <wpml:updateTime>${now}</wpml:updateTime>
-    <wpml:missionConfig>
-      <wpml:flyToWaylineMode>safely</wpml:flyToWaylineMode>
-      <wpml:finishAction>${this.mapFinishAction(finalAction)}</wpml:finishAction>
-      <wpml:exitOnRCLost>executeLostAction</wpml:exitOnRCLost>
-      <wpml:executeRCLostAction>hover</wpml:executeRCLostAction>
-      <wpml:globalTransitionalSpeed>${Math.max(1, Math.min(15, speed))}</wpml:globalTransitionalSpeed>
-      <wpml:droneInfo>
-        <wpml:droneEnumValue>${droneEnumValue}</wpml:droneEnumValue>
-        <wpml:droneSubEnumValue>0</wpml:droneSubEnumValue>
-      </wpml:droneInfo>
-    </wpml:missionConfig>
-    <Folder>
-      <wpml:templateId>0</wpml:templateId>
-      <wpml:executeHeightMode>${executeHeightMode}</wpml:executeHeightMode>
-      <wpml:waylineId>0</wpml:waylineId>
-      <wpml:distance>${Math.round(totalDistance)}</wpml:distance>
-      <wpml:duration>${Math.round(estimatedTime)}</wpml:duration>
-      <wpml:autoFlightSpeed>${speed}</wpml:autoFlightSpeed>
-`;
+      <kml xmlns="http://www.opengis.net/kml/2.2" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:wpml="http://www.dji.com/wpmz/1.0.2" xsi:schemaLocation="http://www.opengis.net/kml/2.2 http://schemas.opengis.net/kml/2.2.0/kml22.xsd">
+        <Document>
+          <wpml:author>WaypointMap</wpml:author>
+          <wpml:createTime>${now}</wpml:createTime>
+          <wpml:updateTime>${now}</wpml:updateTime>
+          <wpml:missionConfig>
+            <wpml:flyToWaylineMode>safely</wpml:flyToWaylineMode>
+            <wpml:finishAction>${this.mapFinishAction(finalAction)}</wpml:finishAction>
+            <wpml:exitOnRCLost>executeLostAction</wpml:exitOnRCLost>
+            <wpml:executeRCLostAction>hover</wpml:executeRCLostAction>
+            <wpml:globalTransitionalSpeed>${Math.max(1, Math.min(15, speed))}</wpml:globalTransitionalSpeed>
+            <wpml:droneInfo>
+              <wpml:droneEnumValue>${droneEnumValue}</wpml:droneEnumValue>
+              <wpml:droneSubEnumValue>0</wpml:droneSubEnumValue>
+            </wpml:droneInfo>
+          </wpml:missionConfig>
+          <Folder>
+            <wpml:templateId>0</wpml:templateId>
+            <wpml:executeHeightMode>${executeHeightMode}</wpml:executeHeightMode>
+            <wpml:waylineId>0</wpml:waylineId>
+            <wpml:distance>${Math.round(totalDistance)}</wpml:distance>
+            <wpml:duration>${Math.round(estimatedTime)}</wpml:duration>
+            <wpml:autoFlightSpeed>${speed}</wpml:autoFlightSpeed>
+            `;
 
     waypoints.forEach((wp, index) => {
       const nextWp = index < waypoints.length - 1 ? waypoints[index + 1] : null;
@@ -155,36 +136,71 @@ class KMZGenerator {
       let validHeading = ((wpHeading % 360) + 360) % 360;
       if (validHeading > 180) validHeading -= 360;
 
-      // Ensure formatting matches correct version (2-space indents for Placemark properties)
-      wpml += `      <Placemark>
-        <Point><coordinates>${wp.lng.toFixed(8)},${wp.lat.toFixed(8)},${validAltitude}</coordinates></Point>
-        <wpml:index>${index}</wpml:index>
-        <wpml:executeHeight>${validAltitude}</wpml:executeHeight>
-        <wpml:waypointSpeed>${validSpeed}</wpml:waypointSpeed>
-        <wpml:waypointHeadingParam>
-          <wpml:waypointHeadingMode>smoothTransition</wpml:waypointHeadingMode>
-          <wpml:waypointHeadingAngle>${validHeading}</wpml:waypointHeadingAngle>
-          <wpml:waypointHeadingAngleEnable>1</wpml:waypointHeadingAngleEnable>
-          <wpml:waypointHeadingPathMode>followBadArc</wpml:waypointHeadingPathMode>
-          <wpml:waypointPoiPoint>0.0,0.0,0.0</wpml:waypointPoiPoint>
-          <wpml:waypointHeadingPoiIndex>0</wpml:waypointHeadingPoiIndex>
-        </wpml:waypointHeadingParam>
-        <wpml:waypointTurnParam>
-          <wpml:waypointTurnMode>${turnMode}</wpml:waypointTurnMode>
-          <wpml:waypointTurnDampingDist>0</wpml:waypointTurnDampingDist>
-        </wpml:waypointTurnParam>
-        <wpml:useStraightLine>${isStraightLine}</wpml:useStraightLine>
-${this.generateActionGroups(index, wp, wpActionPitch, nextActionPitch)}
-        <wpml:waypointGimbalHeadingParam>
-          <wpml:waypointGimbalPitchAngle>0</wpml:waypointGimbalPitchAngle>
-          <wpml:waypointGimbalYawAngle>0</wpml:waypointGimbalYawAngle>
-        </wpml:waypointGimbalHeadingParam>
-      </Placemark>\n`;
+      // 檢查是否為 Auto (DJI default) 模式
+      // settings.headingMode 可能來自 app.js, 如果是 'autoDJI' 則使用 followWayline
+      const isAutoDJI = (settings.headingMode === 'autoDJI');
+
+      if (isAutoDJI) {
+        wpml += `      <Placemark>
+              <Point><coordinates>${wp.lng.toFixed(8)},${wp.lat.toFixed(8)},${validAltitude}</coordinates></Point>
+              <wpml:index>${index}</wpml:index>
+              <wpml:executeHeight>${validAltitude}</wpml:executeHeight>
+              <wpml:waypointSpeed>${validSpeed}</wpml:waypointSpeed>
+              <wpml:waypointHeadingParam>
+                <wpml:waypointHeadingMode>followWayline</wpml:waypointHeadingMode>
+                <wpml:waypointHeadingAngle>0</wpml:waypointHeadingAngle>
+                <wpml:waypointHeadingAngleEnable>0</wpml:waypointHeadingAngleEnable>
+                <wpml:waypointHeadingPathMode>followBadArc</wpml:waypointHeadingPathMode>
+                <wpml:waypointPoiPoint>0.000000,0.000000,0.000000</wpml:waypointPoiPoint>
+                <wpml:waypointHeadingPoiIndex>0</wpml:waypointHeadingPoiIndex>
+              </wpml:waypointHeadingParam>
+              <wpml:waypointTurnParam>
+                <wpml:waypointTurnMode>${turnMode}</wpml:waypointTurnMode>
+                <wpml:waypointTurnDampingDist>0</wpml:waypointTurnDampingDist>
+              </wpml:waypointTurnParam>
+              <wpml:useStraightLine>${isStraightLine}</wpml:useStraightLine>
+
+              ${this.generateActionGroups(index, wp, wpActionPitch, nextActionPitch)}
+
+              <wpml:waypointGimbalHeadingParam>
+                <wpml:waypointGimbalPitchAngle>0</wpml:waypointGimbalPitchAngle>
+                <wpml:waypointGimbalYawAngle>0</wpml:waypointGimbalYawAngle>
+              </wpml:waypointGimbalHeadingParam>
+            </Placemark>\n`;
+      } else {
+        // 原有的 Auto (Course) 或 Fixed 邏輯
+        wpml += `      <Placemark>
+              <Point><coordinates>${wp.lng.toFixed(8)},${wp.lat.toFixed(8)},${validAltitude}</coordinates></Point>
+              <wpml:index>${index}</wpml:index>
+              <wpml:executeHeight>${validAltitude}</wpml:executeHeight>
+              <wpml:waypointSpeed>${validSpeed}</wpml:waypointSpeed>
+              <wpml:waypointHeadingParam>
+                <wpml:waypointHeadingMode>smoothTransition</wpml:waypointHeadingMode>
+                <wpml:waypointHeadingAngle>${validHeading}</wpml:waypointHeadingAngle>
+                <wpml:waypointHeadingAngleEnable>1</wpml:waypointHeadingAngleEnable>
+                <wpml:waypointHeadingPathMode>followBadArc</wpml:waypointHeadingPathMode>
+                <wpml:waypointPoiPoint>0.0,0.0,0.0</wpml:waypointPoiPoint>
+                <wpml:waypointHeadingPoiIndex>0</wpml:waypointHeadingPoiIndex>
+              </wpml:waypointHeadingParam>
+              <wpml:waypointTurnParam>
+                <wpml:waypointTurnMode>${turnMode}</wpml:waypointTurnMode>
+                <wpml:waypointTurnDampingDist>0</wpml:waypointTurnDampingDist>
+              </wpml:waypointTurnParam>
+              <wpml:useStraightLine>${isStraightLine}</wpml:useStraightLine>
+
+              ${this.generateActionGroups(index, wp, wpActionPitch, nextActionPitch)}
+
+              <wpml:waypointGimbalHeadingParam>
+                <wpml:waypointGimbalPitchAngle>0</wpml:waypointGimbalPitchAngle>
+                <wpml:waypointGimbalYawAngle>0</wpml:waypointGimbalYawAngle>
+              </wpml:waypointGimbalHeadingParam>
+            </Placemark>\n`;
+      }
     });
 
     wpml += `    </Folder>
-  </Document>
-</kml>`;
+        </Document>
+      </kml>`;
     return wpml;
   }
 
@@ -213,8 +229,8 @@ ${this.generateActionGroups(index, wp, wpActionPitch, nextActionPitch)}
           <wpml:actionTrigger>
             <wpml:actionTriggerType>reachPoint</wpml:actionTriggerType>
           </wpml:actionTrigger>
-${mainActionXml}
-${gimbalActionXml}
+          ${mainActionXml}
+          ${gimbalActionXml}
         </wpml:actionGroup>\n`;
     }
 
@@ -235,7 +251,7 @@ ${gimbalActionXml}
           <wpml:actionTrigger>
             <wpml:actionTriggerType>reachPoint</wpml:actionTriggerType>
           </wpml:actionTrigger>
-${evenlyRotateXml}
+          ${evenlyRotateXml}
         </wpml:actionGroup>\n`;
     }
 
