@@ -187,6 +187,37 @@ class WaypointMapApp {
         // --- 3. 加入預設圖層 ---
         googleHybrid.addTo(this.map);
 
+        // [新增] 建立 RFZ 圖層 (預設不顯示，但在列表中)
+        const rfzLayer = L.geoJSON(null, {
+            style: {
+                color: '#ff0000', // Red border
+                weight: 1,
+                fillColor: '#ff0000',
+                fillOpacity: 0.2
+            },
+            onEachFeature: (feature, layer) => {
+                if (feature.properties) {
+                    const name = feature.properties.name || 'Restricted Zone';
+                    const desc = feature.properties.description || '';
+                    const time = feature.properties.effectiveDateTime || '';
+                    layer.bindPopup(`<b>${name}</b><br>${desc}<br><i>${time}</i>`);
+                }
+            }
+        });
+
+        // 嘗試讀取 rfz.geojson
+        fetch('rfz.geojson')
+            .then(res => {
+                if (!res.ok) throw new Error('RFZ GeoJSON not found');
+                return res.json();
+            })
+            .then(data => {
+                rfzLayer.addData(data);
+                console.log('[App] RFZ layer loaded:', data.features.length, 'features');
+            })
+            .catch(e => console.warn('[App] RFZ layer skipped:', e));
+
+
         // --- 4. 建立圖層切換控制項 (Layer Control) ---
         const baseLayers = {
             'OpenStreetMap': streets,
@@ -201,7 +232,13 @@ class WaypointMapApp {
             'HK Imagery': hkImageryGroup,
         };
 
-        this.layersControl = L.control.layers(baseLayers, null, { position: 'topright' }).addTo(this.map);
+        const overlays = {
+            "Waypoints": this.waypointsLayer,
+            "Drawings": this.drawnItems,
+            "<span style='color:red'>Drone Map RFZ</span>": rfzLayer
+        };
+
+        this.layersControl = L.control.layers(baseLayers, overlays, { position: 'topright' }).addTo(this.map);
 
         // --- 5. 加入應用程式功能圖層 ---
         this.map.addLayer(this.drawnItems);
