@@ -205,17 +205,72 @@ class WaypointMapApp {
             }
         });
 
-        // 嘗試讀取 rfz.geojson
-        fetch('rfz.geojson')
-            .then(res => {
-                if (!res.ok) throw new Error('RFZ GeoJSON not found');
-                return res.json();
-            })
-            .then(data => {
-                rfzLayer.addData(data);
-                console.log('[App] RFZ layer loaded:', data.features.length, 'features');
-            })
-            .catch(e => console.warn('[App] RFZ layer skipped:', e));
+        /**
+         * 載入 RFZ 資料的混合策略：
+         * 1. 嘗試從網上 Proxy (dronemap.dev) 抓取最新資料。
+         * 2. 若成功，在前端進行解析 (Client-side Parsing)。
+         * 3. 若失敗 (CORS/Network Error)，降級讀取本地 rfz.geojson / esua_rfz.geojson。
+         */
+        const loadRFZData = async () => {
+            const PROXY_URL = 'https://map.dronemap.dev/rfz-proxy.php';
+
+            try {
+                console.log('[App] Trying to fetch remote RFZ data...');
+                const response = await fetch(PROXY_URL, {
+                    method: 'GET',
+                    headers: { 'Accept': 'application/json' }
+                });
+
+                if (!response.ok) throw new Error(`Network response was not ok: ${response.status}`);
+
+                const data = await response.json();
+                if (data.resultCode !== 0) throw new Error('API returned error code');
+
+                // === Client-side Parsing Logic ===
+                const rfzFeaturesRaw = data.data?.rfzFeatures || [];
+                const allFeatures = [];
+
+                rfzFeaturesRaw.forEach(featureStr => {
+                    try {
+                        const featureCollection = JSON.parse(featureStr);
+                        if (featureCollection.type === 'FeatureCollection') {
+                            allFeatures.push(...featureCollection.features);
+                        } else if (featureCollection.type === 'Feature') {
+                            allFeatures.push(featureCollection);
+                        }
+                    } catch (e) {
+                        console.warn('[App] Failed to parse RFZ feature string:', e);
+                    }
+                });
+
+                rfzLayer.addData({ type: 'FeatureCollection', features: allFeatures });
+                console.log('[App] Loaded RFZ data from REMOTE PROXY:', allFeatures.length, 'features');
+
+            } catch (err) {
+                console.warn('[App] Remote fetch failed, falling back to local file:', err);
+
+                // Fallback to local files
+                // 優先嘗試 esua_rfz.geojson (較新)，否則 rfz.geojson
+                const localFiles = ['esua_rfz.geojson', 'rfz.geojson'];
+
+                for (const file of localFiles) {
+                    try {
+                        const res = await fetch(file);
+                        if (res.ok) {
+                            const data = await res.json();
+                            rfzLayer.addData(data);
+                            console.log(`[App] Loaded RFZ data from LOCAL FILE (${file}):`, data.features?.length);
+                            break; // 成功讀取一個就停止
+                        }
+                    } catch (e) {
+                        console.log(`[App] Local file ${file} not found or invalid.`);
+                    }
+                }
+            }
+        };
+
+        // 啟動載入
+        loadRFZData();
 
 
         // --- 4. 建立圖層切換控制項 (Layer Control) ---
@@ -235,7 +290,7 @@ class WaypointMapApp {
         const overlays = {
             "Waypoints": this.waypointsLayer,
             "Drawings": this.drawnItems,
-            "<span style='color:red'>Drone Map RFZ</span>": rfzLayer
+            "Drone Map RFZ": rfzLayer
         };
 
         this.layersControl = L.control.layers(baseLayers, overlays, { position: 'topright' }).addTo(this.map);
