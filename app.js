@@ -11,6 +11,22 @@ class WaypointMapApp {
         this.waypointsLayer = new L.FeatureGroup();
         this.footprintLayer = L.polygon([], { className: 'photo-footprint-preview' });
 
+        // Heading Mode Change
+        const headingMode = document.getElementById('headingMode');
+        const headingInputDiv = document.getElementById('headingInputDiv');
+
+        if (headingMode && headingInputDiv) {
+            headingMode.addEventListener('change', () => {
+                if (headingMode.value === 'fixed') {
+                    headingInputDiv.style.display = 'block';
+                } else {
+                    headingInputDiv.style.display = 'none';
+                }
+            });
+            // Init check
+            headingMode.dispatchEvent(new Event('change'));
+        }
+
         // Data storage
         this.waypoints = [];
         this.shapes = [];
@@ -1218,6 +1234,8 @@ class WaypointMapApp {
             actionGimbalPitch: parseFloat(document.getElementById('actionGimbalPitch')?.value || -75),
 
             action: document.getElementById('action')?.value || 'noAction',
+            headingMode: document.getElementById('headingMode')?.value || 'auto',
+            headingAngle: parseFloat(document.getElementById('headingAngle')?.value || 0),
             turnMode: document.getElementById('turnMode')?.value || 'toPointAndStopWithContinuityCurvature',
             finalAction: document.getElementById('finalAction')?.value || 'hover',
             maintainAltitude: document.getElementById('maintainAltitude')?.checked || false,

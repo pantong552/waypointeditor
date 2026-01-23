@@ -437,6 +437,12 @@ main {
     visibility: visible;
 }
 
+/* 錯誤提示 (紅色) */
+.map-toast.error {
+    background-color: rgba(220, 53, 69, 0.9);
+    /* Bootstrap Danger Red */
+}
+
 /* 輸入框高亮效果 (蓋過原本的 bg-dark) */
 @keyframes highlightFlow {
     0% {

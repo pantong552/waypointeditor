@@ -127,7 +127,40 @@ class KMZGenerator {
       let validHeading = ((wpHeading % 360) + 360) % 360;
       if (validHeading > 180) validHeading -= 360;
 
-      wpml += `      <Placemark>
+      // 檢查是否為 Auto (DJI default) 模式
+      // settings.headingMode 可能來自 app.js, 如果是 'autoDJI' 則使用 followWayline
+      const isAutoDJI = (settings.headingMode === 'autoDJI');
+
+      if (isAutoDJI) {
+        wpml += `      <Placemark>
+              <Point><coordinates>${wp.lng.toFixed(8)},${wp.lat.toFixed(8)},${validAltitude}</coordinates></Point>
+              <wpml:index>${index}</wpml:index>
+              <wpml:executeHeight>${validAltitude}</wpml:executeHeight>
+              <wpml:waypointSpeed>${validSpeed}</wpml:waypointSpeed>
+              <wpml:waypointHeadingParam>
+                <wpml:waypointHeadingMode>followWayline</wpml:waypointHeadingMode>
+                <wpml:waypointHeadingAngle>0</wpml:waypointHeadingAngle>
+                <wpml:waypointHeadingAngleEnable>0</wpml:waypointHeadingAngleEnable>
+                <wpml:waypointHeadingPathMode>followBadArc</wpml:waypointHeadingPathMode>
+                <wpml:waypointPoiPoint>0.000000,0.000000,0.000000</wpml:waypointPoiPoint>
+                <wpml:waypointHeadingPoiIndex>0</wpml:waypointHeadingPoiIndex>
+              </wpml:waypointHeadingParam>
+              <wpml:waypointTurnParam>
+                <wpml:waypointTurnMode>${turnMode}</wpml:waypointTurnMode>
+                <wpml:waypointTurnDampingDist>0</wpml:waypointTurnDampingDist>
+              </wpml:waypointTurnParam>
+              <wpml:useStraightLine>${isStraightLine}</wpml:useStraightLine>
+
+              ${this.generateActionGroups(index, wp, wpActionPitch, nextActionPitch)}
+
+              <wpml:waypointGimbalHeadingParam>
+                <wpml:waypointGimbalPitchAngle>0</wpml:waypointGimbalPitchAngle>
+                <wpml:waypointGimbalYawAngle>0</wpml:waypointGimbalYawAngle>
+              </wpml:waypointGimbalHeadingParam>
+            </Placemark>\n`;
+      } else {
+        // 原有的 Auto (Course) 或 Fixed 邏輯
+        wpml += `      <Placemark>
               <Point><coordinates>${wp.lng.toFixed(8)},${wp.lat.toFixed(8)},${validAltitude}</coordinates></Point>
               <wpml:index>${index}</wpml:index>
               <wpml:executeHeight>${validAltitude}</wpml:executeHeight>
@@ -153,6 +186,7 @@ class KMZGenerator {
                 <wpml:waypointGimbalYawAngle>0</wpml:waypointGimbalYawAngle>
               </wpml:waypointGimbalHeadingParam>
             </Placemark>\n`;
+      }
     });
 
     wpml += `    </Folder>

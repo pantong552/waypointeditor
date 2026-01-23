@@ -261,13 +261,36 @@ class DrawingManager {
         L.DomEvent.stopPropagation(e);
         L.DomEvent.preventDefault(e);
 
+        // 定義最小拖曳距離（公尺），低於此距離視為無效操作
+        const MIN_DRAG_DISTANCE = 5;
+        let isValidOperation = false;
+
         try {
             if (this.currentMode === 'rectangle') {
                 const bounds = L.latLngBounds(this.dragStartPoint, e.latlng);
-                this.createRectangle(bounds);
+
+                // 檢查矩形的對角線距離
+                const distance = this.dragStartPoint.distanceTo(e.latlng);
+                if (distance < MIN_DRAG_DISTANCE) {
+                    console.log('[Drawing] Rectangle too small, ignoring (distance:', distance.toFixed(2), 'm)');
+                    this.showErrorToast('Click and drag to draw a rectangular area');
+                    isValidOperation = false;
+                } else {
+                    this.createRectangle(bounds);
+                    isValidOperation = true;
+                }
             } else if (this.currentMode === 'circle') {
                 const radius = this.dragStartPoint.distanceTo(e.latlng);
-                this.createCircle(this.dragStartPoint, radius);
+
+                // 檢查圓形的半徑
+                if (radius < MIN_DRAG_DISTANCE) {
+                    console.log('[Drawing] Circle too small, ignoring (radius:', radius.toFixed(2), 'm)');
+                    this.showErrorToast('Click and drag to draw a circular area');
+                    isValidOperation = false;
+                } else {
+                    this.createCircle(this.dragStartPoint, radius);
+                    isValidOperation = true;
+                }
             }
         } catch (error) {
             console.error('[Drawing] Error in onMouseUp:', error);
@@ -285,7 +308,10 @@ class DrawingManager {
                 this.tempCircle = null;
             }
 
-            this.toggleMode(null, null); // Finish drawing
+            // 只有在成功創建形狀時才退出繪製模式
+            if (isValidOperation) {
+                this.toggleMode(null, null); // Finish drawing
+            }
         }
     }
 
@@ -786,5 +812,23 @@ class DrawingManager {
 
         this.disableEdit();
         // saveState is called in disableEdit()
+    }
+
+    /**
+     * 顯示錯誤提示 Toast (紅色)
+     */
+    showErrorToast(message) {
+        const toast = document.getElementById('mapToast');
+        if (toast) {
+            toast.textContent = message;
+            toast.classList.add('show', 'error');
+
+            // 清除舊的 timer (防止連續操作時閃爍)
+            if (this._toastTimer) clearTimeout(this._toastTimer);
+
+            this._toastTimer = setTimeout(() => {
+                toast.classList.remove('show', 'error');
+            }, 3000);
+        }
     }
 }
