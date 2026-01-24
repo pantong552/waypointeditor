@@ -50,6 +50,9 @@ class WaypointCalculator {
 
         if (lineSpacing <= 0.1 || pointSpacing <= 0.1) return [];
 
+        // Project polygon to local coordinates once for efficiency
+        const localPolygon = this._projectPolygonToLocal(coordinates, center);
+
         // Project and rotate corners to find extent in grid-space
         const corners = [
             { lat: bounds.minLat, lng: bounds.minLng },
@@ -68,8 +71,11 @@ class WaypointCalculator {
             maxV = Math.max(maxV, rotated.y);
         });
 
-        minU -= lineSpacing; maxU += lineSpacing;
-        minV -= lineSpacing; maxV += lineSpacing;
+        // Expand scan area by buffer (equal to lineSpacing)
+        const buffer = lineSpacing;
+
+        minU -= buffer; maxU += buffer;
+        minV -= buffer; maxV += buffer;
 
         const waypoints = [];
         let lineNumber = 0;
@@ -79,9 +85,21 @@ class WaypointCalculator {
             for (let u = minU; u <= maxU; u += pointSpacing) {
                 const alignedP = { x: u, y: v };
                 const localP = this._unrotatePoint(alignedP, angle);
-                const latlng = this._unprojectFromLocal(localP, center);
 
-                if (this.isPointInsideShape(latlng.lat, latlng.lng, coordinates)) {
+                // Check purely in local metric space
+                // Include if inside OR if within buffer distance from edge
+                const isInside = this._isPointInsideLocalPolygon(localP, localPolygon);
+                let isValid = isInside;
+
+                if (!isValid) {
+                    const dist = this._getDistanceFromPointToPolygon(localP, localPolygon);
+                    if (dist <= buffer) {
+                        isValid = true;
+                    }
+                }
+
+                if (isValid) {
+                    const latlng = this._unprojectFromLocal(localP, center);
                     linePoints.push(latlng);
                 }
             }
@@ -95,6 +113,45 @@ class WaypointCalculator {
         return waypoints;
     }
 
+    _projectPolygonToLocal(latlngs, center) {
+        return latlngs.map(p => this._projectToLocal(p, center));
+    }
+
+    _isPointInsideLocalPolygon(p, polyPoints) {
+        let x = p.x, y = p.y;
+        let inside = false;
+        for (let i = 0, j = polyPoints.length - 1; i < polyPoints.length; j = i++) {
+            let xi = polyPoints[i].x, yi = polyPoints[i].y;
+            let xj = polyPoints[j].x, yj = polyPoints[j].y;
+
+            let intersect = ((yi > y) !== (yj > y)) &&
+                (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+            if (intersect) inside = !inside;
+        }
+        return inside;
+    }
+
+    _getDistanceFromPointToPolygon(p, polyPoints) {
+        let minDistSq = Infinity;
+        for (let i = 0; i < polyPoints.length; i++) {
+            const p1 = polyPoints[i];
+            const p2 = polyPoints[(i + 1) % polyPoints.length];
+            const dSq = this._distToSegmentSquared(p, p1, p2);
+            if (dSq < minDistSq) minDistSq = dSq;
+        }
+        return Math.sqrt(minDistSq);
+    }
+
+    _distToSegmentSquared(p, v, w) {
+        const l2 = (v.x - w.x) ** 2 + (v.y - w.y) ** 2;
+        if (l2 === 0) return (p.x - v.x) ** 2 + (p.y - v.y) ** 2;
+        let t = ((p.x - v.x) * (w.x - v.x) + (p.y - v.y) * (w.y - v.y)) / l2;
+        t = Math.max(0, Math.min(1, t));
+        const distSq = (p.x - (v.x + t * (w.x - v.x))) ** 2 + (p.y - (v.y + t * (w.y - v.y))) ** 2;
+        return distSq;
+    }
+
+    /* Old method kept for reference/compatibility if needed, but local check is preferred */
     isPointInsideShape(lat, lng, polyPoints) {
         let x = lat, y = lng;
         let inside = false;

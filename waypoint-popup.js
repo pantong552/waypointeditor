@@ -75,6 +75,13 @@ class WaypointPopupManager {
 
         // --- 綁定事件 ---
         this.setupEvents(popupEl, index);
+
+        // [新增] 初始化 Tooltips (並設定 container 為 body 以避免 z-index 遮擋)
+        const tooltipTriggerList = popupEl.querySelectorAll('[data-bs-toggle="tooltip"]');
+        [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl, {
+            container: 'body'
+        }));
+
         this.bringToFront(popupEl);
     }
 
@@ -83,6 +90,12 @@ class WaypointPopupManager {
      */
     getPopupTemplate(index, wp) {
         const actionGimbal = wp.actionGimbalPitch !== undefined ? wp.actionGimbalPitch : -75;
+
+        // [新增] 檢查 Heading Mode
+        const isAutoDJI = this.app.settings.headingMode === 'autoDJI';
+        const headingDisabled = isAutoDJI ? 'disabled style="cursor: not-allowed;"' : '';
+        // [修改] 增加 data-bs-theme="dark"
+        const headingTooltip = isAutoDJI ? `data-bs-toggle="tooltip" data-bs-placement="top" data-bs-theme="dark" title="This is controlled by Auto (DJI). Manual editing is disabled."` : '';
 
         return `
         <div class="modal-header border-secondary py-2">
@@ -111,9 +124,13 @@ class WaypointPopupManager {
                     <label class="form-label-xs text-light">Speed</label>
                     <input type="number" name="speed" class="form-control form-control-sm bg-dark text-light border-secondary" value="${wp.speed}">
                 </div>
+                <!-- Heading Input: Conditional Disabled & Tooltip -->
                 <div class="col-4">
                     <label class="form-label-xs text-light">Heading</label>
-                    <input type="number" name="heading" class="form-control form-control-sm bg-dark text-light border-secondary" value="${wp.heading || 0}">
+                    <div ${headingTooltip}> <!-- Wrapper for tooltip on disabled input -->
+                        <!-- [修改] 使用 Math.round 使顯示為整數 -->
+                        <input type="number" name="heading" class="form-control form-control-sm bg-dark text-light border-secondary" value="${Math.round(wp.heading || 0)}" ${headingDisabled}>
+                    </div>
                 </div>
                 <div class="col-6 mt-2">
                     <label class="form-label-xs text-info">Cruising Gimbal</label>

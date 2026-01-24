@@ -10,7 +10,7 @@ const DJI_DRONES = {
     // ==========================================
     'M3E': {
         name: 'Mavic 3 Enterprise (M3E)',
-        enumValue: 77, 
+        enumValue: 77,
         cameras: {
             'M3E_WIDE': { name: 'Wide (4/3" CMOS)', sensorW: 17.3, sensorH: 13.0, focal: 12.29, resW: 5280, resH: 3956 },
             'M3E_TELE': { name: 'Tele (162mm Eq)', sensorW: 6.4, sensorH: 4.8, focal: 28.8, resW: 4000, resH: 3000 }
@@ -63,7 +63,7 @@ const DJI_DRONES = {
     // ==========================================
     // Mavic 3 Consumer Series
     // ==========================================
-    
+
     // 1. Mavic 3 Classic (Single Camera)
     'M3_CLASSIC': {
         name: 'Mavic 3 Classic',
@@ -79,7 +79,7 @@ const DJI_DRONES = {
         enumValue: 68,
         cameras: {
             'HASS_WIDE': { name: 'Hasselblad Wide (24mm)', sensorW: 17.3, sensorH: 13.0, focal: 12.29, resW: 5280, resH: 3956 },
-            'TELE_162':  { name: 'Tele (162mm Eq)', sensorW: 6.4, sensorH: 4.8, focal: 28.8, resW: 4000, resH: 3000 }
+            'TELE_162': { name: 'Tele (162mm Eq)', sensorW: 6.4, sensorH: 4.8, focal: 28.8, resW: 4000, resH: 3000 }
         }
     },
 
@@ -89,7 +89,7 @@ const DJI_DRONES = {
         enumValue: 68,
         cameras: {
             'HASS_WIDE': { name: 'Hasselblad Wide (24mm)', sensorW: 17.3, sensorH: 13.0, focal: 12.29, resW: 5280, resH: 3956 },
-            'TELE_162':  { name: 'Tele (162mm Eq)', sensorW: 6.4, sensorH: 4.8, focal: 28.8, resW: 4000, resH: 3000 }
+            'TELE_162': { name: 'Tele (162mm Eq)', sensorW: 6.4, sensorH: 4.8, focal: 28.8, resW: 4000, resH: 3000 }
         }
     },
 
@@ -99,8 +99,8 @@ const DJI_DRONES = {
         enumValue: 68,
         cameras: {
             'HASS_WIDE': { name: 'Hasselblad Wide (24mm)', sensorW: 17.3, sensorH: 13.0, focal: 12.29, resW: 5280, resH: 3956 },
-            'MED_TELE':  { name: 'Medium Tele (70mm)', sensorW: 9.6, sensorH: 7.2, focal: 18.6, resW: 8064, resH: 6048 }, // 48MP mode
-            'TELE_166':  { name: 'Tele (166mm Eq)', sensorW: 6.4, sensorH: 4.8, focal: 29.5, resW: 4000, resH: 3000 }
+            'MED_TELE': { name: 'Medium Tele (70mm)', sensorW: 9.6, sensorH: 7.2, focal: 18.6, resW: 8064, resH: 6048 }, // 48MP mode
+            'TELE_166': { name: 'Tele (166mm Eq)', sensorW: 6.4, sensorH: 4.8, focal: 29.5, resW: 4000, resH: 3000 }
         }
     },
 
@@ -110,8 +110,8 @@ const DJI_DRONES = {
         enumValue: 68,
         cameras: {
             'HASS_WIDE': { name: 'Hasselblad Wide (24mm)', sensorW: 17.3, sensorH: 13.0, focal: 12.29, resW: 5280, resH: 3956 },
-            'MED_TELE':  { name: 'Medium Tele (70mm)', sensorW: 9.6, sensorH: 7.2, focal: 18.6, resW: 8064, resH: 6048 },
-            'TELE_166':  { name: 'Tele (166mm Eq)', sensorW: 6.4, sensorH: 4.8, focal: 29.5, resW: 4000, resH: 3000 }
+            'MED_TELE': { name: 'Medium Tele (70mm)', sensorW: 9.6, sensorH: 7.2, focal: 18.6, resW: 8064, resH: 6048 },
+            'TELE_166': { name: 'Tele (166mm Eq)', sensorW: 6.4, sensorH: 4.8, focal: 29.5, resW: 4000, resH: 3000 }
         }
     },
 
@@ -157,8 +157,9 @@ class PhotogrammetryCalculator {
     /**
      * Calculate footprint and required spacing/interval
      * [Modified] Added gimbalPitch support for Oblique Photogrammetry
+     * [Modified] Added headingDiff support for Course vs Heading rotation
      */
-    calculate(droneKey, cameraKey, altitude, sideOverlap, frontOverlap, speed, unitMode = 'metric', gimbalPitch = -90) {
+    calculate(droneKey, cameraKey, altitude, sideOverlap, frontOverlap, speed, unitMode = 'metric', gimbalPitch = -90, headingDiff = 0) {
         const drone = this.drones[droneKey];
         if (!drone) return null;
 
@@ -177,50 +178,60 @@ class PhotogrammetryCalculator {
         // 2. [新增] Calculate Slant Range (斜距) for GSD correction
         // 如果 gimbalPitch 是 -90，sin(90) = 1，距離 = 高度
         // 如果 gimbalPitch 是 -45，sin(45) = 0.707，距離 = 高度 / 0.707 (距離變遠)
-        
+
         let pitch = parseFloat(gimbalPitch);
         if (isNaN(pitch)) pitch = -90;
-        
+
         // 限制 Pitch 不要太接近水平，否則距離無限大 (e.g. max -10度)
-        if (pitch > -10) pitch = -10; 
+        if (pitch > -10) pitch = -10;
         if (pitch < -90) pitch = -90;
 
         const thetaRad = Math.abs(pitch) * (Math.PI / 180); // Depression angle
-        
+
         // 核心修正：使用斜距 (Slant Distance) 替代垂直高度 (Altitude)
         const distanceM = altM / Math.sin(thetaRad);
 
         // 3. GSD Calculation (Uses Slant Distance)
         const gsdMetric = (cam.sensorW / cam.resW) * (distanceM / cam.focal) * 100;
 
-        // 4. Footprint Calculation (Uses Slant Distance)
-        // 注意：這計算的是畫面中心的 Footprint 寬高，斜拍時 Footprint 是梯形
-        // 這裡提供的是 "Center GSD" 的對應範圍，用於估算重疊率
-        const footprintW_M = (cam.sensorW * distanceM) / cam.focal;
-        const footprintH_M = (cam.sensorH * distanceM) / cam.focal;
+        // 4. Footprint Calculation (Original, unrotated)
+        const rawFootprintW = (cam.sensorW * distanceM) / cam.focal;
+        const rawFootprintH = (cam.sensorH * distanceM) / cam.focal;
 
-        // 5. Calculate Spacing & Trigger Dist
-        const spacingM = footprintW_M * (1 - (sideOverlap / 100));
-        const triggerDistM = footprintH_M * (1 - (frontOverlap / 100));
+        // 5. [新增] Apply Heading Rotation (Effective Footprint)
+        // headingDiff is angle between Flight Path (Course) and Drone Heading
+        // 0 = Aligned (Normal), 90 = Sideways
+        const rotRad = (headingDiff * Math.PI) / 180;
 
-        // 6. Time Interval
+        // Projected Dimension PERPENDICULAR to flight path (Determines Side Overlap / Spacing)
+        // Width projection + Height projection
+        const effFootprintW = rawFootprintW * Math.abs(Math.cos(rotRad)) + rawFootprintH * Math.abs(Math.sin(rotRad));
+
+        // Projected Dimension PARALLEL to flight path (Determines Front Overlap / Trigger Interval)
+        const effFootprintH = rawFootprintW * Math.abs(Math.sin(rotRad)) + rawFootprintH * Math.abs(Math.cos(rotRad));
+
+        // 6. Calculate Spacing & Trigger Dist using EFFECTIVE dimensions
+        const spacingM = effFootprintW * (1 - (sideOverlap / 100));
+        const triggerDistM = effFootprintH * (1 - (frontOverlap / 100));
+
+        // 7. Time Interval
         const triggerTime = triggerDistM / speedM;
 
-        // 7. Convert Outputs
+        // 8. Convert Outputs
         let result = {
             triggerTime: parseFloat(triggerTime.toFixed(2))
         };
 
         if (unitMode === 'imperial') {
             result.gsd = (gsdMetric * 0.393701).toFixed(2);
-            result.footprintW = (footprintW_M * this.M2FT).toFixed(2);
-            result.footprintH = (footprintH_M * this.M2FT).toFixed(2);
-            result.spacing = parseFloat((spacingM * this.M2FT).toFixed(2));
+            result.footprintW = (rawFootprintW * this.M2FT).toFixed(2); // Show ORIGINAL stamp size for reference
+            result.footprintH = (rawFootprintH * this.M2FT).toFixed(2);
+            result.spacing = parseFloat((spacingM * this.M2FT).toFixed(2)); // Spacing is derived from EFFECTIVE width
             result.triggerDist = parseFloat((triggerDistM * this.M2FT).toFixed(2));
         } else {
             result.gsd = gsdMetric.toFixed(2);
-            result.footprintW = footprintW_M.toFixed(2);
-            result.footprintH = footprintH_M.toFixed(2);
+            result.footprintW = rawFootprintW.toFixed(2);
+            result.footprintH = rawFootprintH.toFixed(2);
             result.spacing = parseFloat(spacingM.toFixed(2));
             result.triggerDist = parseFloat(triggerDistM.toFixed(2));
         }
@@ -244,7 +255,7 @@ class PhotogrammetryCalculator {
 
         // Pitch 限制 (避免水平或向上拍攝導致計算無限遠)
         let pitch = wp.actionGimbalPitch !== undefined ? wp.actionGimbalPitch : -90;
-        if (pitch > -10) pitch = -10; 
+        if (pitch > -10) pitch = -10;
 
         const heading = wp.heading || 0;
         const sensorW = cam.sensorW;
@@ -252,8 +263,8 @@ class PhotogrammetryCalculator {
         const focal = cam.focal;
 
         // 2. 計算半視角
-        const hHFOV = Math.atan(sensorW / (2 * focal)); 
-        const hVFOV = Math.atan(sensorH / (2 * focal)); 
+        const hHFOV = Math.atan(sensorW / (2 * focal));
+        const hVFOV = Math.atan(sensorH / (2 * focal));
 
         // 3. 定義相機視錐體的 4 個角
         const corners = [
@@ -274,34 +285,34 @@ class PhotogrammetryCalculator {
             // vRaw.x = 水平視角分量 (左右)
             // vRaw.y = 1.0 (前方光軸)
             // vRaw.z = 垂直視角分量 (上下, Image Top is Up)
-            
-            const vRaw = { 
-                x: corner.dx * Math.tan(hHFOV), 
-                y: 1.0, 
-                z: corner.dy * Math.tan(hVFOV) 
+
+            const vRaw = {
+                x: corner.dx * Math.tan(hHFOV),
+                y: 1.0,
+                z: corner.dy * Math.tan(hVFOV)
             };
-            
+
             // 對向量進行 Pitch 旋轉 (繞 X 軸轉)
             // 當 Pitch = -90 (向下看) 時，Y軸(Forward) 變為 -Z(Down)，Z軸(Up) 變為 Y(Forward)
-            
+
             const pRad = tiltRad;
             const y_pitch = vRaw.y * Math.cos(pRad) - vRaw.z * Math.sin(pRad); // New Forward
             const z_pitch = vRaw.y * Math.sin(pRad) + vRaw.z * Math.cos(pRad); // New Up/Down
-            
+
             // 射線追蹤: 找 Z=0 (地面) 的交點
             // Ray: P = O + t * V.  O=(0,0,alt). Target Z=0.
             // 0 = alt + t * z_pitch  =>  t = -alt / z_pitch
-            
+
             if (z_pitch >= 0) return null; // 射向天空，無交點
-            
+
             const t = -alt / z_pitch;
-            
+
             // 取得相對於無人機的地面偏移量 (Meters)
             // forwardDist: 正數代表無人機前方，負數代表後方
             // rightDist: 正數代表無人機右方，負數代表左方
             const rightDist = vRaw.x * t;
             const forwardDist = y_pitch * t;
-            
+
             groundOffsets.push({ r: rightDist, f: forwardDist });
         }
 
@@ -309,7 +320,7 @@ class PhotogrammetryCalculator {
         // 公式: 
         // East Offset  = Right * cos(H) + Forward * sin(H)
         // North Offset = -Right * sin(H) + Forward * cos(H)
-        
+
         const rad = (heading * Math.PI) / 180;
         const latPerMeter = 1 / 111111;
         const lngPerMeter = 1 / (111111 * Math.cos(wp.lat * Math.PI / 180));

@@ -1885,8 +1885,37 @@ class WaypointMapApp {
         // 1. 記錄舊數值
         const oldSpeed = document.getElementById('speed').value;
 
-        // 2. 執行計算 (傳入 gimbalPitch)
-        // 這裡就是報錯的地方，如果上面沒有 let gimbalPitch，這裡就會 undefined
+        // [新增] 計算 Heading Diff (相對於飛行路徑的夾角)
+        let headingDiff = 0;
+        const headingMode = this.settings.headingMode; // 'auto' or 'fixed'
+        const headingAngle = this.settings.headingAngle || 0;
+        const lineDirection = this.settings.lineDirection; // 'auto', 'ew', 'ns'
+
+        if (headingMode === 'fixed') {
+            // 定義飛行路徑的角度 (Course)
+            let courseAngle = 0; // Default North (0)
+
+            if (lineDirection === 'ew') {
+                courseAngle = 90; // East-West
+            } else if (lineDirection === 'ns') {
+                courseAngle = 0; // North-South
+            } else {
+                // 'auto' - 我們無法在計算階段得知確切角度，暫時假設對齊 (0 diff)
+                // 或者可以視為 "Worst Case" (45度) ? 
+                // 目前保持 0，因為通常Auto路徑會嘗試長邊飛行，而Auto Heading也會對齊。
+                // 若 Fixed Heading 配 Auto Path，確實會有變數，但這裡先做基本支援。
+                courseAngle = headingAngle; // Assume aligned to minimize error if unknown
+            }
+
+            // 計算夾角 (0-90度)
+            let diff = Math.abs(headingAngle - courseAngle) % 360;
+            if (diff > 180) diff = 360 - diff; // Normalize to 0-180
+            if (diff > 90) diff = 180 - diff;  // Normalize to 0-90 (Symmetric)
+
+            headingDiff = diff;
+        }
+
+        // 2. 執行計算 (傳入 gimbalPitch 和 headingDiff)
         const result = this.calculator.calculate(
             droneKey,
             cameraKey,
@@ -1895,7 +1924,8 @@ class WaypointMapApp {
             frontOverlap,
             speed,
             this.settings.units,
-            gimbalPitch // [新增參數]
+            gimbalPitch,
+            headingDiff // [新增參數]
         );
 
         if (result) {

@@ -598,6 +598,42 @@ main {
     transition: none !important;
 }
 
+/* ========================================
+   Bootstrap Tooltip Fixes
+   ======================================== */
+.tooltip {
+    z-index: 10000 !important; /* 確保在所有彈窗之上 */
+}
+
+.tooltip-inner {
+    background-color: var(--bg-panel) !important;
+    color: var(--text-main) !important;
+    border: 1px solid var(--border-color) !important;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5) !important;
+    padding: 8px 12px !important;
+    font-size: 0.85rem !important;
+}
+
+.bs-tooltip-top .tooltip-arrow::before,
+.bs-tooltip-auto[data-popper-placement^="top"] .tooltip-arrow::before {
+    border-top-color: var(--border-color) !important;
+}
+
+.bs-tooltip-bottom .tooltip-arrow::before,
+.bs-tooltip-auto[data-popper-placement^="bottom"] .tooltip-arrow::before {
+    border-bottom-color: var(--border-color) !important;
+}
+
+.bs-tooltip-start .tooltip-arrow::before,
+.bs-tooltip-auto[data-popper-placement^="left"] .tooltip-arrow::before {
+    border-left-color: var(--border-color) !important;
+}
+
+.bs-tooltip-end .tooltip-arrow::before,
+.bs-tooltip-auto[data-popper-placement^="right"] .tooltip-arrow::before {
+    border-right-color: var(--border-color) !important;
+}
+
 /* Tooltip 內部排版 (沿用之前的設計) */
 #custom-map-tooltip .tooltip-header {
     background-color: rgba(255, 255, 255, 0.05);
