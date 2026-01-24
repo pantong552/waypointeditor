@@ -227,19 +227,24 @@
                                     </div>
                                 </div>
 
-                                <div class="col-12 mt-1">
+                                <div class="col-8 mt-1">
                                     <label class="form-label-xs">Aircraft Heading</label>
-                                    <div class="input-group input-group-sm">
-                                        <select id="headingMode" class="form-select bg-dark text-light border-secondary"
-                                            style="flex: 1.5;">
-                                            <option value="auto">Auto (Editable)</option>
-                                            <option value="autoDJI">Auto (DJI)</option>
-                                            <option value="fixed">Fixed Angle</option>
-                                        </select>
-                                        <div id="headingInputDiv" style="display:none; flex: 1;">
+                                    <select id="headingMode" class="form-select bg-dark text-light border-secondary">
+                                        <option value="auto">Auto (Editable)</option>
+                                        <option value="autoDJI">Auto (DJI)</option>
+                                        <option value="fixed">Fixed Angle</option>
+                                    </select>
+                                </div>
+                                <div class="col-4 mt-1">
+                                    <label class="form-label-xs" id="headingAngleLabel"
+                                        style="display:none;">Angle</label>
+                                    <div id="headingInputDiv" style="display:none;">
+                                        <div class="input-group input-group-sm">
                                             <input type="number" id="headingAngle"
-                                                class="form-control bg-dark text-light border-secondary border-start-0"
-                                                value="0" placeholder="Deg">
+                                                class="form-control bg-dark text-light border-secondary" value="0"
+                                                placeholder="0">
+                                            <span
+                                                class="input-group-text bg-secondary text-light border-secondary">°</span>
                                         </div>
                                     </div>
                                 </div>

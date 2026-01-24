@@ -14,13 +14,14 @@ class WaypointMapApp {
         // Heading Mode Change
         const headingMode = document.getElementById('headingMode');
         const headingInputDiv = document.getElementById('headingInputDiv');
+        const headingAngleLabel = document.getElementById('headingAngleLabel');
 
         if (headingMode && headingInputDiv) {
             headingMode.addEventListener('change', () => {
-                if (headingMode.value === 'fixed') {
-                    headingInputDiv.style.display = 'block';
-                } else {
-                    headingInputDiv.style.display = 'none';
+                const isFixed = headingMode.value === 'fixed';
+                headingInputDiv.style.display = isFixed ? 'block' : 'none';
+                if (headingAngleLabel) {
+                    headingAngleLabel.style.display = isFixed ? 'block' : 'none';
                 }
             });
             // Init check
@@ -491,18 +492,20 @@ class WaypointMapApp {
         return (toDeg(θ) + 360) % 360;
     }
 
-    /**
-     * Setup Heading UI
-     */
     setupHeadingUI() {
         const modeSelect = document.getElementById('headingMode');
         const inputDiv = document.getElementById('headingInputDiv');
+        const label = document.getElementById('headingAngleLabel');
+
+        const updateVisibility = () => {
+            const isFixed = modeSelect.value === 'fixed';
+            inputDiv.style.display = isFixed ? 'block' : 'none';
+            if (label) label.style.display = isFixed ? 'block' : 'none';
+        };
 
         if (modeSelect && inputDiv) {
-            modeSelect.addEventListener('change', (e) => {
-                inputDiv.style.display = e.target.value === 'fixed' ? 'block' : 'none';
-            });
-            inputDiv.style.display = modeSelect.value === 'fixed' ? 'block' : 'none';
+            modeSelect.addEventListener('change', updateVisibility);
+            updateVisibility();
         }
     }
 
