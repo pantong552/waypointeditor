@@ -679,6 +679,31 @@ class WaypointMapApp {
 
 
     /**
+     * Helper to approximate a circle as a polygon
+     */
+    getCirclePolygonCoordinates(circle, sides = 64) {
+        const center = circle.getLatLng();
+        const radius = circle.getRadius();
+        const points = [];
+        const R = 6378137; // Earth radius in meters
+
+        for (let i = 0; i < sides; i++) {
+            const angle = (i * 360 / sides) * (Math.PI / 180);
+            const dx = radius * Math.cos(angle);
+            const dy = radius * Math.sin(angle);
+
+            const dLat = (dy / R) * (180 / Math.PI);
+            const dLng = (dx / (R * Math.cos(center.lat * Math.PI / 180))) * (180 / Math.PI);
+
+            points.push({
+                lat: center.lat + dLat,
+                lng: center.lng + dLng
+            });
+        }
+        return points;
+    }
+
+    /**
      * Generate waypoints for a shape using external API
      */
     async generateWaypointsForShape(layer, shapeType) {
@@ -700,10 +725,9 @@ class WaypointMapApp {
             } else {
                 coordinates = latlngs;
             }
-        } else if (typeof layer.getLatLng === 'function') {
-            // Circle/Marker - logic might be different or not supported by this API yet
-            // For now, let's skip or handle circle as polygon approximation if needed
-            return [];
+        } else if (typeof layer.getLatLng === 'function' && typeof layer.getRadius === 'function') {
+            // Circle - Approximate as Polygon
+            coordinates = this.getCirclePolygonCoordinates(layer);
         }
 
         // Prepare Settings

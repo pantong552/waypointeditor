@@ -74,7 +74,9 @@
                 <div class="tab-pane fade show active" id="tab-advanced" role="tabpanel">
                     <form id="advancedForm" class="compact-form">
 
-                        <div class="section-title">Basic</div>
+                        <div class="section-title">
+                            <i class="bi bi-airplane-engines-fill me-1"></i> Basic
+                        </div>
                         <div class="bg-dark border border-secondary rounded p-2 mb-3">
                             <div class="row g-1 mb-2">
                                 <div class="col-6">
@@ -116,8 +118,8 @@
                                     <label class="form-label-xs">Speed</label>
                                     <div class="input-group input-group-sm">
                                         <input type="number" id="speed"
-                                            class="form-control bg-dark text-light border-secondary" value="5.5"
-                                            step="0.5">
+                                            class="form-control bg-dark text-light border-secondary" value="9.5"
+                                            step="0.1" min="1">
                                         <span class="input-group-text bg-secondary text-light border-secondary"><span
                                                 class="unitsLabel">m</span>/s</span>
                                     </div>
@@ -125,50 +127,11 @@
                             </div>
                         </div>
 
-                        <div class="section-title mt-3"><i class="bi bi-camera me-1"></i>Photogrammetry Auto-Calc</div>
-                        <div class="bg-dark border border-secondary rounded p-2 mb-3">
-                            <div class="row g-1">
-                                <div class="col-6 mt-1">
-                                    <label class="form-label-xs">Side Overlap %</label>
-                                    <input type="number" id="sideOverlap"
-                                        class="form-control form-control-sm bg-dark text-light border-secondary"
-                                        value="70" max="90" min="10">
-                                </div>
-                                <div class="col-6 mt-1">
-                                    <label class="form-label-xs">Front Overlap %</label>
-                                    <input type="number" id="frontOverlap"
-                                        class="form-control form-control-sm bg-dark text-light border-secondary"
-                                        value="80" max="90" min="10">
-                                </div>
-                                <div class="col-12 mt-2">
-                                    <div class="d-grid">
-                                        <button type="button" id="btnAutoCalc" class="btn btn-outline-info btn-sm"
-                                            disabled>
-                                            <i class="bi bi-calculator me-1"></i> Apply to Settings
-                                        </button>
-                                    </div>
-                                </div>
-                                <div class="col-12 mt-1 text-center">
-                                    <small class="text-muted" style="font-size: 0.7rem;">
-                                        GSD: <span id="gsdDisplay" class="text-light">-</span> <span
-                                            id="gsdUnit">cm/px</span> |
-                                        Footprint: <span id="footprintDisplay" class="text-light">-</span> <span
-                                            id="footprintUnit">m</span>
-                                    </small>
-                                </div>
-                            </div>
-                        </div>
-
                         <div class="section-title mt-3">
-                            <i class="bi bi-camera-video me-1"></i> Camera & Action
+                            <i class="bi bi-camera-video me-1"></i> Action & Orientation
                         </div>
                         <div class="bg-dark border border-secondary rounded p-2 mb-3">
                             <div class="row g-2 mb-2">
-                                <div class="col-12">
-                                    <small class="text-secondary fw-bold text-uppercase"
-                                        style="font-size: 0.65rem;">Task & Orientation</small>
-                                </div>
-
                                 <div class="col-6">
                                     <label class="form-label-xs">Action</label>
                                     <select id="action"
@@ -188,7 +151,7 @@
                                     </label>
                                     <div class="input-group input-group-sm">
                                         <input type="number" id="actionGimbalPitch"
-                                            class="form-control bg-dark text-light border-secondary" value="-75"
+                                            class="form-control bg-dark text-light border-secondary" value="-90"
                                             max="30" min="-90">
                                         <span class="input-group-text bg-secondary border-secondary text-light">°</span>
                                     </div>
@@ -196,7 +159,8 @@
 
                                 <div class="col-8 mt-1">
                                     <label class="form-label-xs">Aircraft Heading</label>
-                                    <select id="headingMode" class="form-select bg-dark text-light border-secondary">
+                                    <select id="headingMode"
+                                        class="form-select form-select-sm bg-dark text-light border-secondary">
                                         <option value="auto">Auto (Editable)</option>
                                         <option value="autoDJI">Auto (DJI)</option>
                                         <option value="fixed">Fixed Angle</option>
@@ -218,34 +182,74 @@
                             </div>
                         </div>
 
-                        <div class="section-title mt-3">Flight Path</div>
+                        <div class="section-title mt-3"><i class="bi bi-camera me-1"></i> Photogrammetry Auto-Calc</div>
+                        <div class="bg-dark border border-secondary rounded p-2 mb-3">
+                            <div class="row g-1">
+                                <div class="col-6 mt-1">
+                                    <label class="form-label-xs">Side Overlap %</label>
+                                    <input type="number" id="sideOverlap"
+                                        class="form-control form-control-sm bg-dark text-light border-secondary"
+                                        value="70" max="90" min="10">
+                                </div>
+                                <div class="col-6 mt-1">
+                                    <label class="form-label-xs">Front Overlap %</label>
+                                    <input type="number" id="frontOverlap"
+                                        class="form-control form-control-sm bg-dark text-light border-secondary"
+                                        value="70" max="90" min="10">
+                                </div>
+                                <div class="col-12 mt-2">
+                                    <div class="d-grid">
+                                        <button type="button" id="btnAutoCalc" class="btn btn-outline-info btn-sm"
+                                            disabled>
+                                            <i class="bi bi-calculator me-1"></i> Apply to Settings
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="col-12 mt-1 text-center">
+                                    <small class="text-muted" style="font-size: 0.7rem;">
+                                        GSD: <span id="gsdDisplay" class="text-light">-</span> <span
+                                            id="gsdUnit">cm/px</span> |
+                                        Footprint: <span id="footprintDisplay" class="text-light">-</span> <span
+                                            id="footprintUnit">m</span>
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="section-title mt-3">
+                            <i class="bi bi-map me-1"></i> Flight Path
+                        </div>
                         <div class="bg-dark border border-secondary rounded p-2 mb-3">
                             <div class="row g-1 mb-2">
+                                <div class="col-12">
+                                    <small class="text-secondary fw-bold text-uppercase"
+                                        style="font-size: 0.65rem;">Waypoints &amp; Placement</small>
+                                </div>
                                 <div class="col-4">
-                                    <label class="form-label-xs">Spacing</label>
+                                    <label class="form-label-xs">Side Spacing</label>
                                     <div class="input-group input-group-sm">
                                         <input type="number" id="spacing"
-                                            class="form-control bg-dark text-light border-secondary" value="50"
-                                            step="1">
+                                            class="form-control bg-dark text-light border-secondary" value="50" step="1"
+                                            min="1">
                                         <span
                                             class="input-group-text bg-secondary text-light border-secondary unitsLabel">m</span>
                                     </div>
                                 </div>
-                                <div class="col-3">
-                                    <label class="form-label-xs">Interval</label>
+                                <div class="col-4">
+                                    <label class="form-label-xs">Point Interval</label>
                                     <div class="input-group input-group-sm">
                                         <input type="number" id="interval"
                                             class="form-control bg-dark text-light border-secondary" value="3"
-                                            step="0.5">
+                                            step="0.1" min="0.1">
                                         <span
-                                            class="input-group-text bg-secondary border-secondary text-light px-1">s</span>
+                                            class="input-group-text bg-secondary text-light border-secondary unitsLabel">s</span>
                                     </div>
                                 </div>
-                                <div class="col-5">
+                                <div class="col-4">
                                     <label class="form-label-xs">Direction</label>
                                     <select id="lineDirection"
                                         class="form-select form-select-sm bg-dark text-light border-secondary">
-                                        <option value="auto">Auto (Shortest)</option>
+                                        <option value="auto">Auto</option>
                                         <option value="ew">East-West</option>
                                         <option value="ns">North-South</option>
                                     </select>
