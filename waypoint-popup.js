@@ -133,10 +133,6 @@ class WaypointPopupManager {
                     </div>
                 </div>
                 <div class="col-6 mt-2">
-                    <label class="form-label-xs text-info">Cruising Gimbal</label>
-                    <input type="number" name="gimbal" class="form-control form-control-sm bg-dark text-light border-secondary" value="${wp.gimbalAngle}">
-                </div>
-                <div class="col-6 mt-2">
                     <label class="form-label-xs text-warning">Shooting Gimbal</label>
                     <input type="number" name="actionGimbal" class="form-control form-control-sm bg-dark text-light border-secondary" value="${actionGimbal}">
                 </div>
@@ -299,7 +295,6 @@ class WaypointPopupManager {
         wp.speed = parseFloat(popupEl.querySelector('[name="speed"]').value);
         wp.heading = parseFloat(popupEl.querySelector('[name="heading"]').value);
         wp.action = popupEl.querySelector('[name="action"]').value;
-        wp.gimbalAngle = parseFloat(popupEl.querySelector('[name="gimbal"]').value);
         wp.actionGimbalPitch = parseFloat(popupEl.querySelector('[name="actionGimbal"]').value);
         wp.turnMode = popupEl.querySelector('[name="turnMode"]').value;
 

@@ -51,7 +51,7 @@ class WaypointMapApp {
             lineDirection: 'auto',
             overlap: 80,
             interval: 3,
-            gimbalAngle: -90,        // Flight Pitch (State) - Cruising
+            interval: 3,
             actionGimbalPitch: -75,  // Action Pitch (Command) - Shooting [UPDATED]
             action: 'noAction',
             turnMode: 'toPointAndStopWithContinuityCurvature',
@@ -537,7 +537,6 @@ class WaypointMapApp {
             wp.speed = this.settings.speed;
 
             // [UPDATED] Assign new Gimbal Params
-            wp.gimbalAngle = this.settings.gimbalAngle;             // Cruising Pitch
             wp.actionGimbalPitch = this.settings.actionGimbalPitch; // Shooting Pitch
 
             wp.action = this.settings.action;
@@ -831,10 +830,7 @@ class WaypointMapApp {
                     <span class="tooltip-value">${Math.round(heading)}°</span>
                 </div>
                 <div class="border-bottom border-secondary my-1 opacity-25"></div>
-                <div class="tooltip-row">
-                    <span class="tooltip-label"><i class="bi bi-send me-1"></i>Cruising</span>
-                    <span class="tooltip-value text-info">${wp.gimbalAngle}°</span>
-                </div>
+
                 <div class="tooltip-row">
                     <span class="tooltip-label"><i class="bi bi-camera-video me-1"></i>Action</span>
                     <span class="tooltip-value text-warning">${wp.actionGimbalPitch !== undefined ? wp.actionGimbalPitch : -75}°</span>
