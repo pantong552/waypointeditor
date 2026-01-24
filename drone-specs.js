@@ -157,9 +157,8 @@ class PhotogrammetryCalculator {
     /**
      * Calculate footprint and required spacing/interval
      * [Modified] Added gimbalPitch support for Oblique Photogrammetry
-     * [Modified] Added headingDiff support for Course vs Heading rotation
      */
-    calculate(droneKey, cameraKey, altitude, sideOverlap, frontOverlap, speed, unitMode = 'metric', gimbalPitch = -90, headingDiff = 0) {
+    calculate(droneKey, cameraKey, altitude, sideOverlap, frontOverlap, speed, unitMode = 'metric', gimbalPitch = -90) {
         const drone = this.drones[droneKey];
         if (!drone) return null;
 
@@ -194,44 +193,34 @@ class PhotogrammetryCalculator {
         // 3. GSD Calculation (Uses Slant Distance)
         const gsdMetric = (cam.sensorW / cam.resW) * (distanceM / cam.focal) * 100;
 
-        // 4. Footprint Calculation (Original, unrotated)
-        const rawFootprintW = (cam.sensorW * distanceM) / cam.focal;
-        const rawFootprintH = (cam.sensorH * distanceM) / cam.focal;
+        // 4. Footprint Calculation (Uses Slant Distance)
+        // 注意：這計算的是畫面中心的 Footprint 寬高，斜拍時 Footprint 是梯形
+        // 這裡提供的是 "Center GSD" 的對應範圍，用於估算重疊率
+        const footprintW_M = (cam.sensorW * distanceM) / cam.focal;
+        const footprintH_M = (cam.sensorH * distanceM) / cam.focal;
 
-        // 5. [新增] Apply Heading Rotation (Effective Footprint)
-        // headingDiff is angle between Flight Path (Course) and Drone Heading
-        // 0 = Aligned (Normal), 90 = Sideways
-        const rotRad = (headingDiff * Math.PI) / 180;
+        // 5. Calculate Spacing & Trigger Dist
+        const spacingM = footprintW_M * (1 - (sideOverlap / 100));
+        const triggerDistM = footprintH_M * (1 - (frontOverlap / 100));
 
-        // Projected Dimension PERPENDICULAR to flight path (Determines Side Overlap / Spacing)
-        // Width projection + Height projection
-        const effFootprintW = rawFootprintW * Math.abs(Math.cos(rotRad)) + rawFootprintH * Math.abs(Math.sin(rotRad));
-
-        // Projected Dimension PARALLEL to flight path (Determines Front Overlap / Trigger Interval)
-        const effFootprintH = rawFootprintW * Math.abs(Math.sin(rotRad)) + rawFootprintH * Math.abs(Math.cos(rotRad));
-
-        // 6. Calculate Spacing & Trigger Dist using EFFECTIVE dimensions
-        const spacingM = effFootprintW * (1 - (sideOverlap / 100));
-        const triggerDistM = effFootprintH * (1 - (frontOverlap / 100));
-
-        // 7. Time Interval
+        // 6. Time Interval
         const triggerTime = triggerDistM / speedM;
 
-        // 8. Convert Outputs
+        // 7. Convert Outputs
         let result = {
             triggerTime: parseFloat(triggerTime.toFixed(2))
         };
 
         if (unitMode === 'imperial') {
             result.gsd = (gsdMetric * 0.393701).toFixed(2);
-            result.footprintW = (rawFootprintW * this.M2FT).toFixed(2); // Show ORIGINAL stamp size for reference
-            result.footprintH = (rawFootprintH * this.M2FT).toFixed(2);
-            result.spacing = parseFloat((spacingM * this.M2FT).toFixed(2)); // Spacing is derived from EFFECTIVE width
+            result.footprintW = (footprintW_M * this.M2FT).toFixed(2);
+            result.footprintH = (footprintH_M * this.M2FT).toFixed(2);
+            result.spacing = parseFloat((spacingM * this.M2FT).toFixed(2));
             result.triggerDist = parseFloat((triggerDistM * this.M2FT).toFixed(2));
         } else {
             result.gsd = gsdMetric.toFixed(2);
-            result.footprintW = rawFootprintW.toFixed(2);
-            result.footprintH = rawFootprintH.toFixed(2);
+            result.footprintW = footprintW_M.toFixed(2);
+            result.footprintH = footprintH_M.toFixed(2);
             result.spacing = parseFloat(spacingM.toFixed(2));
             result.triggerDist = parseFloat(triggerDistM.toFixed(2));
         }
