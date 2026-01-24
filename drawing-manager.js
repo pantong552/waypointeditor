@@ -25,6 +25,14 @@ class DrawingManager {
 
         this.initToolbar();
         this.initMapEvents();
+
+        // [New] Drag State
+        this.justDragged = false;
+        this.isBodyDragging = false;
+        this.currentEditHandles = [];
+        this.bodyDragStartPoint = null;
+        this.bodyDragStartLatLngs = null;
+        this.bodyDragStartCenter = null;
     }
 
     /**
@@ -437,11 +445,16 @@ class DrawingManager {
         // [Fix] 進入編輯模式前，強制取消任何繪圖狀態
         this.cancelDrawing();
 
-        this.disableEdit();
+        this.disableEdit(); // Clear previous first
+
         this.editingLayer = layer;
         this.editingType = type;
 
         layer.setStyle({ color: '#00d68f', dashArray: '5, 5' });
+
+        // [New] Bind Body Drag Event (Once)
+        this._boundBodyMouseDown = (e) => this.onBodyMouseDown(e);
+        layer.on('mousedown', this._boundBodyMouseDown);
 
         this.renderHandles(layer, type);
         this.renderDeleteButton(layer);
@@ -451,9 +464,16 @@ class DrawingManager {
         if (!this.editingLayer) return;
         console.log('[Drawing] Disable Edit & Save');
 
+        // [New] Remove Body Drag Event
+        if (this._boundBodyMouseDown) {
+            this.editingLayer.off('mousedown', this._boundBodyMouseDown);
+            this._boundBodyMouseDown = null;
+        }
+
         this.editingLayer.setStyle({ color: '#0d6efd', dashArray: null });
         this.editHandlesLayer.clearLayers();
         this.editingLayer = null;
+        this.currentEditHandles = []; // Clear handles ref
         this.app.saveState();
     }
 
@@ -540,8 +560,9 @@ class DrawingManager {
             this.editHandlesLayer.addLayer(ghost);
         }
 
-        // Enable body drag for Polygon/Polyline
-        this.makeDraggable(layer, vertexHandles);
+        // Store active handles for body drag syncing
+        this.currentEditHandles = vertexHandles;
+        // this.makeDraggable(layer, vertexHandles); // [Removed]
 
         this.renderDeleteButton(layer);
     }
@@ -561,9 +582,12 @@ class DrawingManager {
                 L.DomEvent.stopPropagation(e);
                 const newPos = e.target.getLatLng();
 
+                // [Fix] Always get fresh latlngs from layer to prevent using stale closure data
+                const currentLatLngs = layer.getLatLngs()[0];
+
                 // Resize based on opposite corner
                 const oppositeIdx = (index + 2) % 4;
-                const oppositePoint = latlngs[oppositeIdx];
+                const oppositePoint = currentLatLngs[oppositeIdx];
                 const newBounds = L.latLngBounds(oppositePoint, newPos);
 
                 layer.setBounds(newBounds);
@@ -576,8 +600,9 @@ class DrawingManager {
             });
         });
 
-        // 2. Enable Body Drag
-        this.makeDraggable(layer, handles);
+        // 2. Storage handles for Drag
+        this.currentEditHandles = handles;
+        // this.makeDraggable(layer, handles); // [Removed]
 
         this.renderDeleteButton(layer);
     }
@@ -600,8 +625,9 @@ class DrawingManager {
             this.updateDeleteButtonPosition(layer);
         });
 
-        // 2. Enable Body Drag
-        this.makeDraggable(layer, [radiusHandle]);
+        // 2. Store handles for Drag
+        this.currentEditHandles = [radiusHandle];
+        // this.makeDraggable(layer, [radiusHandle]); // [Removed]
 
         this.renderDeleteButton(layer);
     }
@@ -633,132 +659,163 @@ class DrawingManager {
     }
 
     /**
-     * Helper to make a layer draggable by its body
+     * [Refactor] Body Dragging Logic moved to class methods
      */
-    makeDraggable(layer, handles = []) {
-        console.log('[Drawing] makeDraggable init');
-        let isDragging = false;
-        let startPoint = null;
-        let startLatLngs = null;
-        let startCenter = null;
+    onBodyMouseDown(e) {
+        if (this.currentMode) return;
+        if (!this.editingLayer) return;
 
-        layer.on('mousedown', (e) => {
-            if (this.currentMode) return;
-            if (!this.editingLayer) return; // Only if editing
+        L.DomEvent.stopPropagation(e);
+        L.DomEvent.preventDefault(e);
 
-            L.DomEvent.stopPropagation(e);
-            L.DomEvent.preventDefault(e);
+        this.isBodyDragging = true;
+        this.bodyDragStartPoint = e.latlng;
+        this.map.dragging.disable();
 
-            isDragging = true;
-            startPoint = e.latlng;
-            this.map.dragging.disable();
-
-            if (layer instanceof L.Polygon) {
-                // Deep copy latlngs
-                startLatLngs = layer.getLatLngs().map(ring => ring.map(ll => L.latLng(ll.lat, ll.lng)));
-            } else if (layer instanceof L.Circle) {
-                startCenter = layer.getLatLng();
-            }
-        });
-
-        this.map.on('mousemove', (e) => {
-            if (!isDragging || !startPoint) return;
-
-            const currentPoint = e.latlng;
-            const latDiff = currentPoint.lat - startPoint.lat;
-            const lngDiff = currentPoint.lng - startPoint.lng;
-
-            if (layer instanceof L.Polygon) {
-                // Polygon/Rectangle: Shift all points
-                const newLatLngs = startLatLngs.map(ring => {
-                    return ring.map(p => L.latLng(p.lat + latDiff, p.lng + lngDiff));
-                });
-                layer.setLatLngs(newLatLngs);
-
-                // Sync vertex handles
-                if (handles.length > 0) {
-                    const flatPoints = newLatLngs[0];
-                    handles.forEach((h) => {
-                        if (h.index !== undefined && flatPoints[h.index]) {
-                            h.setLatLng(flatPoints[h.index]);
-                        }
-                    });
+        // Capture initial state
+        const layer = this.editingLayer;
+        if (layer instanceof L.Polygon) { // Includes Rectangle
+            // Deep copy latlngs: Multi-ring support
+            this.bodyDragStartLatLngs = layer.getLatLngs().map(ring => {
+                // Rectangle/Polygon latlng structure might differ (Rectangle is [[p1,p2,p3,p4]])
+                if (Array.isArray(ring)) {
+                    return ring.map(ll => L.latLng(ll.lat, ll.lng));
                 }
+                // Handle single ring polygon if flat array (unlikely in Leaflet 1.x but safe)
+                return L.latLng(ring.lat, ring.lng);
+            });
+            // Normalize: Ensure consistent structure (Leaflet usually returns [ [Array of LatLng] ] for simple polygon)
+        } else if (layer instanceof L.Circle) {
+            this.bodyDragStartCenter = layer.getLatLng();
+        }
 
-                // Update Ghost Handles for Polygon/Polyline
-                if (this.editingType === 'polygon' || this.editingType === 'polyline') {
-                    const points = newLatLngs[0];
-                    const ghostHandles = [];
+        // Bind global mouse events for drag
+        this._boundBodyMouseMove = (ev) => this.onBodyMouseMove(ev);
+        this._boundBodyMouseUp = (ev) => this.onBodyMouseUp(ev);
 
-                    // Collect all ghost handles
-                    this.editHandlesLayer.eachLayer((handleLayer) => {
-                        if (handleLayer.getElement && handleLayer.getElement().classList.contains('ghost-handle')) {
-                            ghostHandles.push(handleLayer);
-                        }
-                    });
+        this.map.on('mousemove', this._boundBodyMouseMove);
+        this.map.on('mouseup', this._boundBodyMouseUp);
+    }
 
-                    // Update ghost handle positions
-                    let ghostIndex = 0;
-                    for (let i = 0; i < points.length; i++) {
-                        const nextIdx = (i + 1) % points.length;
-                        if (this.editingType === 'polyline' && i === points.length - 1) break;
+    onBodyMouseMove(e) {
+        if (!this.isBodyDragging || !this.bodyDragStartPoint) return;
 
-                        const p1 = points[i];
-                        const p2 = points[nextIdx];
-                        const midLat = (p1.lat + p2.lat) / 2;
-                        const midLng = (p1.lng + p2.lng) / 2;
+        const currentPoint = e.latlng;
+        const latDiff = currentPoint.lat - this.bodyDragStartPoint.lat;
+        const lngDiff = currentPoint.lng - this.bodyDragStartPoint.lng;
 
-                        if (ghostHandles[ghostIndex]) {
-                            ghostHandles[ghostIndex].setLatLng([midLat, midLng]);
-                            ghostIndex++;
-                        }
+        const layer = this.editingLayer;
+        const handles = this.currentEditHandles;
+
+        if (layer instanceof L.Polygon) {
+            // Polygon/Rectangle: Shift all points
+            // Assuming layer.getLatLngs() structure matches what we captured
+            // We use the start positions to calculate new positions (absolute shift from start)
+            // This prevents floating point drift accumulation
+            const newLatLngs = this.bodyDragStartLatLngs.map(ring => {
+                return ring.map(p => L.latLng(p.lat + latDiff, p.lng + lngDiff));
+            });
+
+            layer.setLatLngs(newLatLngs);
+
+            // Sync vertex handles
+            if (handles.length > 0) {
+                const flatPoints = newLatLngs[0];
+                handles.forEach((h) => {
+                    if (h.index !== undefined && flatPoints[h.index]) {
+                        h.setLatLng(flatPoints[h.index]);
+                    }
+                });
+            }
+
+            // Update Ghost Handles for Polygon/Polyline (re-calc midpoints)
+            if (this.editingType === 'polygon' || this.editingType === 'polyline') {
+                const points = newLatLngs[0];
+                const ghostHandles = [];
+
+                // Collect all ghost handles from the layer group
+                this.editHandlesLayer.eachLayer((handleLayer) => {
+                    if (handleLayer.getElement && handleLayer.getElement().classList.contains('ghost-handle')) {
+                        ghostHandles.push(handleLayer);
+                    }
+                });
+
+                // Update ghost handle positions
+                let ghostIndex = 0;
+                for (let i = 0; i < points.length; i++) {
+                    const nextIdx = (i + 1) % points.length;
+                    if (this.editingType === 'polyline' && i === points.length - 1) break;
+
+                    const p1 = points[i];
+                    const p2 = points[nextIdx];
+                    const midLat = (p1.lat + p2.lat) / 2;
+                    const midLng = (p1.lng + p2.lng) / 2;
+
+                    if (ghostHandles[ghostIndex]) {
+                        ghostHandles[ghostIndex].setLatLng([midLat, midLng]);
+                        ghostIndex++;
                     }
                 }
-
-            } else if (layer instanceof L.Circle) {
-                const newCenter = L.latLng(startCenter.lat + latDiff, startCenter.lng + lngDiff);
-                layer.setLatLng(newCenter);
-
-                // Sync radius handle (it's separate from center)
-                if (handles.length > 0) {
-                    // For circle handles, we passed radiusHandle in array
-                    // We need to re-calculate its position based on new center + radius (which shouldn't change)
-                    // Or simpler: shift handle by same diff
-                    handles.forEach(h => {
-                        if (h._startPos) {
-                            h.setLatLng([h._startPos.lat + latDiff, h._startPos.lng + lngDiff]);
-                        } else {
-                            // If we didn't store start pos, we can't easily shift. 
-                            // Let's store start pos on mousedown for handles?
-                            // Or just re-calc position from geometry if possible.
-                            // For Radius handle: North point
-                            if (h === this.radiusHandle) {
-                                const bounds = layer.getBounds();
-                                h.setLatLng(L.latLng(bounds.getNorth(), newCenter.lng));
-                            }
-                        }
-                    });
-                }
             }
 
-            this.updateDeleteButtonPosition(layer);
-        });
+        } else if (layer instanceof L.Circle) {
+            const newCenter = L.latLng(
+                this.bodyDragStartCenter.lat + latDiff,
+                this.bodyDragStartCenter.lng + lngDiff
+            );
+            layer.setLatLng(newCenter);
 
-        this.map.on('mouseup', () => {
-            if (isDragging) {
-                isDragging = false;
-                startPoint = null;
-                this.map.dragging.enable();
-
-                // Re-render handles to update Ghost Handle positions
-                if (this.editingLayer && this.editingType) {
-                    this.editHandlesLayer.clearLayers();
-                    this.renderHandles(this.editingLayer, this.editingType);
-                }
-
-                this.app.saveState();
+            // Sync radius handle
+            if (handles.length > 0) {
+                handles.forEach(h => {
+                    // Radius handle is at North point
+                    if (h === this.radiusHandle) {
+                        const bounds = layer.getBounds();
+                        h.setLatLng(L.latLng(bounds.getNorth(), newCenter.lng));
+                    }
+                });
             }
-        });
+        }
+
+        this.updateDeleteButtonPosition(layer);
+    }
+
+    onBodyMouseUp(e) {
+        if (this.isBodyDragging) {
+            this.isBodyDragging = false;
+            this.bodyDragStartPoint = null;
+            this.bodyDragStartLatLngs = null;
+            this.bodyDragStartCenter = null;
+
+            this.map.dragging.enable();
+
+            // Set flag to prevent click-to-exit
+            this.justDragged = true;
+            setTimeout(() => { this.justDragged = false; }, 100);
+
+            // Re-render handles to ensure clean state and correct ghost handles
+            if (this.editingLayer && this.editingType) {
+                // We re-render to "snap" everything to the final positions and reset listeners on handles
+                // Note: onBodyMouseMove updates positions, but re-rendering ensures structural integrity
+                // However, re-rendering might be expensive or cause flicker. 
+                // Previous code re-rendered. Let's keep it for safety unless it's too slow.
+                // Or better: we updated handles in real-time, maybe we don't need full re-render?
+                // The ghost handles logic above was manual. Re-rendering ensures they get fresh 'drag' listeners etc.
+                this.renderHandles(this.editingLayer, this.editingType);
+            }
+
+            this.app.saveState();
+        }
+
+        // Cleanup global listeners for this drag session
+        if (this._boundBodyMouseMove) {
+            this.map.off('mousemove', this._boundBodyMouseMove);
+            this._boundBodyMouseMove = null;
+        }
+        if (this._boundBodyMouseUp) {
+            this.map.off('mouseup', this._boundBodyMouseUp);
+            this._boundBodyMouseUp = null;
+        }
     }
 
     /**
