@@ -520,8 +520,30 @@ class WaypointMapApp {
 
         this.clearWaypoints();
 
-        for (const shape of this.shapes) {
+        for (let i = 0; i < this.shapes.length; i++) {
+            const shape = this.shapes[i];
             const newPoints = await this.generateWaypointsForShape(shape.layer, shape.type);
+
+            // Calculate Stats for this shape (Flight Distance & Time)
+            let shapeDist = 0;
+            if (newPoints.length > 1) {
+                for (let j = 0; j < newPoints.length - 1; j++) {
+                    const p1 = L.latLng(newPoints[j].lat, newPoints[j].lng);
+                    const p2 = L.latLng(newPoints[j + 1].lat, newPoints[j + 1].lng);
+                    shapeDist += p1.distanceTo(p2);
+                }
+            }
+            const shapeTime = this.settings.speed > 0 ? shapeDist / this.settings.speed : 0; // Simple flight time
+
+            // Update Mission Label
+            if (shape.layer.missionLabelAnchor) {
+                // [New] Update using DrawingManager helper
+                this.drawingManager.updateLabelStats(shape.layer, shapeDist, shapeTime);
+            }
+
+            // [New] Assign mission index to points for tracking
+            newPoints.forEach(p => p.missionIndex = i);
+
             this.waypoints.push(...newPoints);
         }
 
@@ -1037,6 +1059,12 @@ class WaypointMapApp {
 
                 // 確保 Tooltip 隱藏
                 this.hideCustomTooltip();
+
+                // [New] Recalculate Mission Stats in real-time
+                // Accessing the modified waypoint via closure `wp` (which was updated above)
+                if (wp.missionIndex !== undefined) {
+                    this.recalculateMissionStats(wp.missionIndex);
+                }
             });
 
             // [修改] 拖曳結束：儲存狀態 + 重新顯示 Tooltip
@@ -1359,6 +1387,31 @@ class WaypointMapApp {
     }
 
     /**
+     * [New] Recalculate Stats for a specific Mission (Shape)
+     * Triggered when a waypoint in that mission is dragged
+     */
+    recalculateMissionStats(missionIndex) {
+        if (missionIndex < 0 || missionIndex >= this.shapes.length) return;
+
+        const shapeLayer = this.shapes[missionIndex].layer;
+        const missionPoints = this.waypoints.filter(wp => wp.missionIndex === missionIndex);
+
+        if (missionPoints.length < 2) return;
+
+        let dist = 0;
+        for (let i = 0; i < missionPoints.length - 1; i++) {
+            const p1 = L.latLng(missionPoints[i].lat, missionPoints[i].lng);
+            const p2 = L.latLng(missionPoints[i + 1].lat, missionPoints[i + 1].lng);
+            dist += p1.distanceTo(p2);
+        }
+
+        const speed = this.settings.speed || 5.5;
+        const time = speed > 0 ? dist / speed : 0;
+
+        this.drawingManager.updateLabelStats(shapeLayer, dist, time);
+    }
+
+    /**
      * Change units
      */
     changeUnits() {
@@ -1633,6 +1686,11 @@ class WaypointMapApp {
      */
     restoreState(state) {
         console.log('[App] Restoring State:', state);
+
+        // [New] Clear existing labels
+        if (this.drawingManager && this.drawingManager.clearAllLabels) {
+            this.drawingManager.clearAllLabels();
+        }
 
         // 1. 還原 Waypoints
         this.waypoints = state.waypoints;

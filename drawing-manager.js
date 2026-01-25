@@ -15,6 +15,9 @@ class DrawingManager {
         // State
         this.currentMode = null; // 'polygon', 'polyline', 'marker'
         this.isDrawing = false;
+
+        // [New] Layer Group for Mission Labels (Managed separately on Map)
+        this.labelsLayer = L.layerGroup().addTo(this.map);
         this.drawingPoints = [];
         this.tempLine = null;
         this.tempPoly = null;
@@ -435,6 +438,9 @@ class DrawingManager {
         } else {
             console.log('[Drawing] Skipped saveState (Restore/Undo action)');
         }
+
+        // [New] Refresh Labels (Renumbering & Creation)
+        this.refreshMissionLabels();
     }
 
     /**
@@ -504,6 +510,7 @@ class DrawingManager {
                 points[index] = newPos;
                 type === 'polygon' ? layer.setLatLngs([points]) : layer.setLatLngs(points);
                 this.updateDeleteButtonPosition(layer);
+                this.updateLabelPosition(layer); // [New]
 
                 // [Fix] Update adjacent ghost handles in real-time
                 if (handle.prevGhost) {
@@ -554,9 +561,13 @@ class DrawingManager {
                 points[i + 1] = e.target.getLatLng();
                 type === 'polygon' ? layer.setLatLngs([points]) : layer.setLatLngs(points);
                 this.updateDeleteButtonPosition(layer);
+                this.updateLabelPosition(layer); // [New]
             });
 
-            ghost.on('dragend', () => this.renderHandles(layer, type));
+            ghost.on('dragend', () => {
+                this.renderHandles(layer, type);
+                this.updateLabelPosition(layer); // [New]
+            });
             this.editHandlesLayer.addLayer(ghost);
         }
 
@@ -597,6 +608,8 @@ class DrawingManager {
                 handles.forEach((h, i) => h.setLatLng(newPoints[i]));
 
                 this.updateDeleteButtonPosition(layer);
+                // [New] Update Label
+                this.updateLabelPosition(layer);
             });
         });
 
@@ -623,12 +636,13 @@ class DrawingManager {
             const newRadius = layer.getLatLng().distanceTo(newPos);
             layer.setRadius(newRadius);
             this.updateDeleteButtonPosition(layer);
+            this.updateLabelPosition(layer); // [New]
         });
 
         // 2. Store handles for Drag
         this.currentEditHandles = [radiusHandle];
-        // this.makeDraggable(layer, [radiusHandle]); // [Removed]
 
+        this.updateLabelPosition(layer); // [New]
         this.renderDeleteButton(layer);
     }
 
@@ -775,7 +789,11 @@ class DrawingManager {
                     }
                 });
             }
-        }
+
+            // [New] Update Label Position
+            this.updateLabelPosition(layer);
+
+        } // End isBodyDragging check
 
         this.updateDeleteButtonPosition(layer);
     }
@@ -854,21 +872,151 @@ class DrawingManager {
         this.editHandlesLayer.addLayer(this.deleteBtnLayer);
     }
 
-    updateDeleteButtonPosition(layer) {
-        if (!this.deleteBtnLayer) return;
-        const bounds = layer.getBounds();
-        this.deleteBtnLayer.setLatLng(bounds.getNorthEast());
-    }
-
     deleteCurrentFeature() {
         if (!this.editingLayer) return;
-        console.log('[Drawing] Deleting current feature');
+
+        // [New] Remove Label associated with this layer
+        this.removeMissionLabel(this.editingLayer);
 
         this.map.removeLayer(this.editingLayer);
-        this.app.shapes = this.app.shapes.filter(s => s.layer !== this.editingLayer);
+        this.drawnItems.removeLayer(this.editingLayer);
+
+        // Remove from app.shapes
+        const idx = this.app.shapes.findIndex(s => s.layer === this.editingLayer);
+        if (idx !== -1) {
+            this.app.shapes.splice(idx, 1);
+        }
 
         this.disableEdit();
-        // saveState is called in disableEdit()
+
+        // [New] Refresh labels (Renumbering)
+        this.refreshMissionLabels();
+
+        this.app.saveState();
+    }
+
+    /**
+     * 6. Mission Label Management
+     */
+    createMissionLabel(layer) {
+        if (layer.missionLabelAnchor) return; // Already ready
+
+        // Determine initial position (Bottom Center)
+        const bounds = layer.getBounds();
+        const southCenter = L.latLng(bounds.getSouth(), bounds.getCenter().lng);
+
+        // Create invisible anchor marker
+        const anchor = L.marker(southCenter, {
+            icon: L.divIcon({ className: 'd-none', iconSize: [0, 0] }),
+            interactive: false
+        }).addTo(this.labelsLayer); // [Modified] Add to dedicated labelsLayer
+
+        // We need to manage these anchors so they can be removed/restored
+        // Let's attach to layer for easy access
+        layer.missionLabelAnchor = anchor;
+
+        // Create Tooltip
+        anchor.bindTooltip('Mission ...', {
+            permanent: true,
+            direction: 'bottom',
+            className: 'mission-label',
+            offset: [0, 5]
+        }).openTooltip();
+    }
+
+    updateLabelPosition(layer) {
+        if (!layer.missionLabelAnchor) return;
+
+        const bounds = layer.getBounds();
+        // Recalculate South-Center
+        const southCenter = L.latLng(bounds.getSouth(), bounds.getCenter().lng);
+        layer.missionLabelAnchor.setLatLng(southCenter);
+    }
+
+    refreshMissionLabels() {
+        // Iterate all registered shapes in app.shapes
+        // Assign Mission ID based on index
+        this.app.shapes.forEach((shapeObj, index) => {
+            const layer = shapeObj.layer;
+            const missionId = index + 1;
+
+            // Ensure label exists (Handle Restore/Undo cases where anchor might be missing)
+            if (!layer.missionLabelAnchor) {
+                this.createMissionLabel(layer);
+            } else if (!this.labelsLayer.hasLayer(layer.missionLabelAnchor)) {
+                // If anchor exists but not on map (e.g. after clearLayers?), re-add
+                layer.missionLabelAnchor.addTo(this.labelsLayer);
+            }
+
+            // Update Label Content (Preserve stats if they exist, or just ID)
+            const tooltip = layer.missionLabelAnchor.getTooltip();
+            if (tooltip) {
+                // If we have stats stored on the layer, use them?
+                // Or just update the Title part. 
+                // Let's check if content has <br>, if so, we keep the existing content but replace "Mission X"
+                const currentContent = tooltip.getContent(); // String or HTML
+                let newContent = `Mission ${missionId}`;
+
+                // If existing content has details (Dist/Time), preserve them
+                const parts = typeof currentContent === 'string' ? currentContent.split('<br>') : [];
+                if (parts.length > 1) {
+                    newContent = `Mission ${missionId}<br>${parts.slice(1).join('<br>')}`;
+                }
+
+                layer.missionLabelAnchor.setTooltipContent(newContent);
+            }
+        });
+    }
+
+    removeMissionLabel(layer) {
+        if (layer.missionLabelAnchor) {
+            this.labelsLayer.removeLayer(layer.missionLabelAnchor);
+            layer.missionLabelAnchor = null;
+        }
+    }
+
+    /**
+     * Clear all labels (Helper for App Restore/Clear)
+     */
+    clearAllLabels() {
+        this.labelsLayer.clearLayers();
+    }
+
+    /**
+     * Update Label Stats (Called from App)
+     */
+    updateLabelStats(layer, dist, time) {
+        if (!layer.missionLabelAnchor) return;
+
+        // Find mission ID
+        const idx = this.app.shapes.findIndex(s => s.layer === layer);
+        if (idx === -1) return;
+
+        const missionId = idx + 1;
+        const finalDist = typeof dist === 'number' ? dist.toFixed(0) : dist;
+        const finalTime = typeof time === 'number' ? time.toFixed(0) : time;
+
+        const content = `Mission ${missionId}<br>Dist: ${finalDist}m<br>Time: ${finalTime}s`;
+        layer.missionLabelAnchor.setTooltipContent(content);
+    }
+
+    updateDeleteButtonPosition(layer) {
+        if (!this.deleteBtnLayer) return;
+
+        let pos;
+        if (layer instanceof L.Polygon) {
+            // Polygon/Rectangle: Top-Right of bounds
+            const bounds = layer.getBounds();
+            pos = bounds.getNorthEast();
+        } else if (layer instanceof L.Circle) {
+            // Circle: Top-Right of bounding box
+            const bounds = layer.getBounds();
+            pos = bounds.getNorthEast();
+        }
+
+        if (pos) {
+            this.deleteBtnLayer.setLatLng(pos);
+        }
     }
 
     /**
