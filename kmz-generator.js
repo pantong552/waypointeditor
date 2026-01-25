@@ -90,8 +90,8 @@ class KMZGenerator {
     if (!speed || speed <= 0) speed = 12;
     const distance = this.calculateTotalDistance(waypoints);
     const flightTime = Math.round(distance / speed);
-    const hoverTime = waypoints.length * 2;
-    return flightTime + hoverTime;
+    // [Modified] Removed hover time for consistency with Photogrammetry (continuous flight)
+    return flightTime;
   }
 
   haversineDistance(lat1, lon1, lat2, lon2) {
