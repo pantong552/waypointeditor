@@ -691,14 +691,11 @@ class DrawingManager {
         if (layer instanceof L.Polygon) { // Includes Rectangle
             // Deep copy latlngs: Multi-ring support
             this.bodyDragStartLatLngs = layer.getLatLngs().map(ring => {
-                // Rectangle/Polygon latlng structure might differ (Rectangle is [[p1,p2,p3,p4]])
                 if (Array.isArray(ring)) {
                     return ring.map(ll => L.latLng(ll.lat, ll.lng));
                 }
-                // Handle single ring polygon if flat array (unlikely in Leaflet 1.x but safe)
                 return L.latLng(ring.lat, ring.lng);
             });
-            // Normalize: Ensure consistent structure (Leaflet usually returns [ [Array of LatLng] ] for simple polygon)
         } else if (layer instanceof L.Circle) {
             this.bodyDragStartCenter = layer.getLatLng();
         }
@@ -722,10 +719,6 @@ class DrawingManager {
         const handles = this.currentEditHandles;
 
         if (layer instanceof L.Polygon) {
-            // Polygon/Rectangle: Shift all points
-            // Assuming layer.getLatLngs() structure matches what we captured
-            // We use the start positions to calculate new positions (absolute shift from start)
-            // This prevents floating point drift accumulation
             const newLatLngs = this.bodyDragStartLatLngs.map(ring => {
                 return ring.map(p => L.latLng(p.lat + latDiff, p.lng + lngDiff));
             });
@@ -742,19 +735,16 @@ class DrawingManager {
                 });
             }
 
-            // Update Ghost Handles for Polygon/Polyline (re-calc midpoints)
+            // Update Ghost Handles
             if (this.editingType === 'polygon' || this.editingType === 'polyline') {
                 const points = newLatLngs[0];
                 const ghostHandles = [];
-
-                // Collect all ghost handles from the layer group
                 this.editHandlesLayer.eachLayer((handleLayer) => {
                     if (handleLayer.getElement && handleLayer.getElement().classList.contains('ghost-handle')) {
                         ghostHandles.push(handleLayer);
                     }
                 });
 
-                // Update ghost handle positions
                 let ghostIndex = 0;
                 for (let i = 0; i < points.length; i++) {
                     const nextIdx = (i + 1) % points.length;
@@ -771,7 +761,6 @@ class DrawingManager {
                     }
                 }
             }
-
         } else if (layer instanceof L.Circle) {
             const newCenter = L.latLng(
                 this.bodyDragStartCenter.lat + latDiff,
@@ -779,22 +768,18 @@ class DrawingManager {
             );
             layer.setLatLng(newCenter);
 
-            // Sync radius handle
             if (handles.length > 0) {
                 handles.forEach(h => {
-                    // Radius handle is at North point
                     if (h === this.radiusHandle) {
                         const bounds = layer.getBounds();
                         h.setLatLng(L.latLng(bounds.getNorth(), newCenter.lng));
                     }
                 });
             }
+        }
 
-            // [New] Update Label Position
-            this.updateLabelPosition(layer);
-
-        } // End isBodyDragging check
-
+        // [New] Update Label Position and Delete Button Position after the move
+        this.updateLabelPosition(this.editingLayer);
         this.updateDeleteButtonPosition(layer);
     }
 
@@ -807,25 +792,16 @@ class DrawingManager {
 
             this.map.dragging.enable();
 
-            // Set flag to prevent click-to-exit
             this.justDragged = true;
             setTimeout(() => { this.justDragged = false; }, 100);
 
-            // Re-render handles to ensure clean state and correct ghost handles
             if (this.editingLayer && this.editingType) {
-                // We re-render to "snap" everything to the final positions and reset listeners on handles
-                // Note: onBodyMouseMove updates positions, but re-rendering ensures structural integrity
-                // However, re-rendering might be expensive or cause flicker. 
-                // Previous code re-rendered. Let's keep it for safety unless it's too slow.
-                // Or better: we updated handles in real-time, maybe we don't need full re-render?
-                // The ghost handles logic above was manual. Re-rendering ensures they get fresh 'drag' listeners etc.
                 this.renderHandles(this.editingLayer, this.editingType);
             }
 
             this.app.saveState();
         }
 
-        // Cleanup global listeners for this drag session
         if (this._boundBodyMouseMove) {
             this.map.off('mousemove', this._boundBodyMouseMove);
             this._boundBodyMouseMove = null;
@@ -840,7 +816,6 @@ class DrawingManager {
      * 5. Delete Logic (Custom UI)
      */
     renderDeleteButton(layer) {
-        // [Fix] Remove old delete button if it exists
         if (this.deleteBtnLayer) {
             this.editHandlesLayer.removeLayer(this.deleteBtnLayer);
             this.deleteBtnLayer = null;
@@ -853,21 +828,19 @@ class DrawingManager {
                 iconSize: [24, 24],
                 iconAnchor: [12, 12]
             }),
-            interactive: true
+            interactive: true,
+            zIndexOffset: 1000
         });
 
         this.deleteBtnLayer.on('click', (e) => {
             L.DomEvent.stopPropagation(e);
             L.DomEvent.preventDefault(e);
-
             this.ignoreNextClick = true;
             setTimeout(() => this.ignoreNextClick = false, 100);
-
             this.deleteCurrentFeature();
         });
 
         this.deleteBtnLayer.on('dblclick', L.DomEvent.stopPropagation);
-
         this.updateDeleteButtonPosition(layer);
         this.editHandlesLayer.addLayer(this.deleteBtnLayer);
     }
@@ -877,6 +850,11 @@ class DrawingManager {
 
         // [New] Remove Label associated with this layer
         this.removeMissionLabel(this.editingLayer);
+
+        // [New] Remove waypoints inside this shape
+        if (this.app.removeWaypointsInShape) {
+            this.app.removeWaypointsInShape(this.editingLayer);
+        }
 
         this.map.removeLayer(this.editingLayer);
         this.drawnItems.removeLayer(this.editingLayer);
@@ -899,71 +877,62 @@ class DrawingManager {
      * 6. Mission Label Management
      */
     createMissionLabel(layer) {
-        if (layer.missionLabelAnchor) return; // Already ready
-
-        // Determine initial position (Bottom Center)
+        if (layer.missionLabelAnchor) return;
         const bounds = layer.getBounds();
         const southCenter = L.latLng(bounds.getSouth(), bounds.getCenter().lng);
-
-        // Create invisible anchor marker
-        const anchor = L.marker(southCenter, {
-            icon: L.divIcon({ className: 'd-none', iconSize: [0, 0] }),
-            interactive: false
-        }).addTo(this.labelsLayer); // [Modified] Add to dedicated labelsLayer
-
-        // We need to manage these anchors so they can be removed/restored
-        // Let's attach to layer for easy access
-        layer.missionLabelAnchor = anchor;
-
-        // Create Tooltip
-        anchor.bindTooltip('Mission ...', {
-            permanent: true,
-            direction: 'bottom',
-            className: 'mission-label',
-            offset: [0, 5]
-        }).openTooltip();
+        // [Refactor] Use L.DivIcon for full styling control
+        // Note: The anchor of the icon is defined here. [0, 0] means the top-left of the icon is at the latlng.
+        // But we want the center of the TOP of the label to be at the latlng (south center of polygon).
+        // Since we don't know the width yet, we rely on CSS transform: translateX(-50%).
+        const html = `<div class="mission-label-content">Mission ...</div>`;
+        const icon = L.divIcon({
+            className: 'mission-label-container',
+            html: html,
+            iconSize: null, // Let CSS control size
+            iconAnchor: [0, 0] // We will shift using margin/transform in CSS
+        });
+        const labelMarker = L.marker(southCenter, {
+            icon: icon,
+            interactive: false,
+            zIndexOffset: 1000
+        }).addTo(this.labelsLayer);
+        layer.missionLabelAnchor = labelMarker;
     }
 
     updateLabelPosition(layer) {
         if (!layer.missionLabelAnchor) return;
-
         const bounds = layer.getBounds();
-        // Recalculate South-Center
         const southCenter = L.latLng(bounds.getSouth(), bounds.getCenter().lng);
         layer.missionLabelAnchor.setLatLng(southCenter);
     }
 
     refreshMissionLabels() {
-        // Iterate all registered shapes in app.shapes
-        // Assign Mission ID based on index
         this.app.shapes.forEach((shapeObj, index) => {
             const layer = shapeObj.layer;
             const missionId = index + 1;
-
-            // Ensure label exists (Handle Restore/Undo cases where anchor might be missing)
             if (!layer.missionLabelAnchor) {
                 this.createMissionLabel(layer);
             } else if (!this.labelsLayer.hasLayer(layer.missionLabelAnchor)) {
-                // If anchor exists but not on map (e.g. after clearLayers?), re-add
                 layer.missionLabelAnchor.addTo(this.labelsLayer);
             }
-
-            // Update Label Content (Preserve stats if they exist, or just ID)
-            const tooltip = layer.missionLabelAnchor.getTooltip();
-            if (tooltip) {
-                // If we have stats stored on the layer, use them?
-                // Or just update the Title part. 
-                // Let's check if content has <br>, if so, we keep the existing content but replace "Mission X"
-                const currentContent = tooltip.getContent(); // String or HTML
-                let newContent = `Mission ${missionId}`;
-
-                // If existing content has details (Dist/Time), preserve them
-                const parts = typeof currentContent === 'string' ? currentContent.split('<br>') : [];
-                if (parts.length > 1) {
-                    newContent = `Mission ${missionId}<br>${parts.slice(1).join('<br>')}`;
+            if (layer.missionLabelAnchor) {
+                const icon = layer.missionLabelAnchor.options.icon;
+                const currentHtml = icon.options.html;
+                let newHtml;
+                if (currentHtml && currentHtml.includes('<br>')) {
+                    newHtml = currentHtml.replace(/Mission \d+/, `Mission ${missionId}`);
+                } else {
+                    newHtml = `<div class="mission-label-content">Mission ${missionId}</div>`;
                 }
-
-                layer.missionLabelAnchor.setTooltipContent(newContent);
+                if (newHtml !== currentHtml) {
+                    const newIcon = L.divIcon({
+                        className: 'mission-label-container',
+                        html: newHtml,
+                        iconSize: null,
+                        iconAnchor: [0, 0]
+                    });
+                    layer.missionLabelAnchor.setIcon(newIcon);
+                }
             }
         });
     }
@@ -975,62 +944,48 @@ class DrawingManager {
         }
     }
 
-    /**
-     * Clear all labels (Helper for App Restore/Clear)
-     */
     clearAllLabels() {
         this.labelsLayer.clearLayers();
     }
 
-    /**
-     * Update Label Stats (Called from App)
-     */
     updateLabelStats(layer, dist, time) {
         if (!layer.missionLabelAnchor) return;
-
-        // Find mission ID
         const idx = this.app.shapes.findIndex(s => s.layer === layer);
         if (idx === -1) return;
-
         const missionId = idx + 1;
         const finalDist = typeof dist === 'number' ? dist.toFixed(0) : dist;
         const finalTime = typeof time === 'number' ? time.toFixed(0) : time;
-
-        const content = `Mission ${missionId}<br>Dist: ${finalDist}m<br>Time: ${finalTime}s`;
-        layer.missionLabelAnchor.setTooltipContent(content);
+        const html = `<div class="mission-label-content">Mission ${missionId}<br>Dist: ${finalDist}m<br>Time: ${finalTime}s</div>`;
+        const newIcon = L.divIcon({
+            className: 'mission-label-container',
+            html: html,
+            iconSize: null,
+            iconAnchor: [0, 0]
+        });
+        layer.missionLabelAnchor.setIcon(newIcon);
     }
 
     updateDeleteButtonPosition(layer) {
         if (!this.deleteBtnLayer) return;
-
         let pos;
         if (layer instanceof L.Polygon) {
-            // Polygon/Rectangle: Top-Right of bounds
             const bounds = layer.getBounds();
             pos = bounds.getNorthEast();
         } else if (layer instanceof L.Circle) {
-            // Circle: Top-Right of bounding box
             const bounds = layer.getBounds();
             pos = bounds.getNorthEast();
         }
-
         if (pos) {
             this.deleteBtnLayer.setLatLng(pos);
         }
     }
 
-    /**
-     * 顯示錯誤提示 Toast (紅色)
-     */
     showErrorToast(message) {
         const toast = document.getElementById('mapToast');
         if (toast) {
             toast.textContent = message;
             toast.classList.add('show', 'error');
-
-            // 清除舊的 timer (防止連續操作時閃爍)
             if (this._toastTimer) clearTimeout(this._toastTimer);
-
             this._toastTimer = setTimeout(() => {
                 toast.classList.remove('show', 'error');
             }, 3000);

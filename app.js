@@ -1756,6 +1756,58 @@ class WaypointMapApp {
     }
 
     /**
+     * Remove waypoints inside a logical shape
+     */
+    removeWaypointsInShape(layer) {
+        if (!layer) return;
+
+        // Iterate in reverse to safely splice
+        for (let i = this.waypoints.length - 1; i >= 0; i--) {
+            const wp = this.waypoints[i];
+            const latlng = L.latLng(wp.lat, wp.lng);
+            let inside = false;
+
+            if (layer instanceof L.Polygon) {
+                // Ray casting or using Leaflet's geometry util if available
+                // Simple Ray Casting for Polygon
+                // Note: Leaflet doesn't have a built-in "contains" for Polygon in standard build without plugins,
+                // but we can implement a simple one or use bounds check first.
+                // For accurate check:
+                inside = this.isPointInPolygon(latlng, layer.getLatLngs()[0]);
+            } else if (layer instanceof L.Circle) {
+                inside = layer.getLatLng().distanceTo(latlng) <= layer.getRadius();
+            } else if (layer instanceof L.Rectangle) {
+                inside = layer.getBounds().contains(latlng);
+            }
+
+            if (inside) {
+                this.waypoints.splice(i, 1);
+            }
+        }
+
+        this.renderWaypoints();
+        this.updateExportTab();
+        this.saveState();
+    }
+
+    /**
+     * Simple Ray Casting algorithm for Point in Polygon
+     */
+    isPointInPolygon(latlng, polyPoints) {
+        const x = latlng.lat, y = latlng.lng;
+        let inside = false;
+        for (let i = 0, j = polyPoints.length - 1; i < polyPoints.length; j = i++) {
+            const xi = polyPoints[i].lat, yi = polyPoints[i].lng;
+            const xj = polyPoints[j].lat, yj = polyPoints[j].lng;
+
+            const intersect = ((yi > y) !== (yj > y)) &&
+                (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+            if (intersect) inside = !inside;
+        }
+        return inside;
+    }
+
+    /**
      * Reset everything
      */
     async reset() {
@@ -1765,8 +1817,13 @@ class WaypointMapApp {
         );
 
         if (confirmed) {
-            this.drawingManager.disableEdit(); // [新增]
-            this.drawingManager.cancelDrawing(); // [新增]
+            // [新增] Clear Labels
+            if (this.drawingManager && this.drawingManager.clearAllLabels) {
+                this.drawingManager.clearAllLabels();
+            }
+
+            this.drawingManager.disableEdit();
+            this.drawingManager.cancelDrawing();
             this.popupManager.closeAll();
             this.drawnItems.clearLayers();
             this.clearWaypoints();
