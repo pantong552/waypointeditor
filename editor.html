@@ -51,17 +51,41 @@
                     class="bi bi-keyboard"></i></button>
 
             <div class="vr mx-1 bg-secondary"></div>
-            <span id="userInfo" class="text-light small me-2" style="display: none;"></span>
-            <button id="upgradeBtn" class="btn btn-warning btn-xs ms-2 fw-bold" style="display:none;"
-                data-bs-toggle="modal" data-bs-target="#proModal">
-                UPGRADE
-            </button>
-            <button id="loginBtn" class="btn btn-outline-info btn-xs" title="Google Login">
-                <i class="bi bi-google"></i> Login
-            </button>
-            <button id="logoutBtn" class="btn btn-outline-secondary btn-xs" title="Logout" style="display: none;">
-                Logout
-            </button>
+            <!-- User Profile Dropdown (Initially Hidden) -->
+            <div class="dropdown ms-2" id="userProfileDropdown" style="display: none;">
+                <button
+                    class="btn btn-dark btn-xs dropdown-toggle d-flex align-items-center gap-2 border border-secondary"
+                    type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    <div class="user-avatar-placeholder bg-secondary text-white rounded-circle d-flex justify-content-center align-items-center"
+                        style="width: 24px; height: 24px; font-size: 12px;">
+                        <i class="bi bi-person-fill"></i>
+                    </div>
+                    <span id="currentUserEmail" class="text-light small"
+                        style="max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">User</span>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end dropdown-menu-dark shadow border-secondary"
+                    style="font-size: 0.9rem;">
+                    <li>
+                        <h6 class="dropdown-header text-muted text-uppercase small" style="font-size: 0.7rem;">Account
+                        </h6>
+                    </li>
+                    <li>
+                        <span class="dropdown-item-text d-flex justify-content-between align-items-center">
+                            Status
+                            <span id="userProBadge" class="badge bg-secondary rounded-pill"
+                                style="font-size: 0.7em;">Free</span>
+                        </span>
+                    </li>
+                    <li>
+                        <hr class="dropdown-divider border-secondary opacity-50">
+                    </li>
+                    <li>
+                        <button class="dropdown-item text-danger d-flex align-items-center gap-2" id="logoutBtn">
+                            <i class="bi bi-box-arrow-right"></i> Logout
+                        </button>
+                    </li>
+                </ul>
+            </div>
         </div>
     </div>
 
@@ -430,10 +454,57 @@
     <script src="drone-specs.js"></script>
     <script src="waypoint-popup.js"></script>
     <script src="message-box.js"></script>
+    <div class="modal fade" id="authModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+            <div class="modal-content bg-dark text-light border-secondary">
+                <div class="modal-header border-secondary py-2">
+                    <h6 class="modal-title" id="authModalTitle">Login</h6>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-3">
+                    <ul class="nav nav-pills nav-fill mb-3" id="authTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active py-1" id="tab-login" data-bs-toggle="pill"
+                                data-bs-target="#pills-login" type="button" role="tab"
+                                onclick="toggleAuthMode('login')">Login</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link py-1" id="tab-register" data-bs-toggle="pill"
+                                data-bs-target="#pills-register" type="button" role="tab"
+                                onclick="toggleAuthMode('register')">Register</button>
+                        </li>
+                    </ul>
+
+                    <div class="mb-3">
+                        <label for="authEmail" class="form-label-xs">Email</label>
+                        <input type="email" class="form-control form-control-sm bg-dark text-light border-secondary"
+                            id="authEmail" placeholder="name@example.com">
+                    </div>
+                    <div class="mb-3">
+                        <label for="authPassword" class="form-label-xs">Password</label>
+                        <input type="password" class="form-control form-control-sm bg-dark text-light border-secondary"
+                            id="authPassword">
+                    </div>
+
+                    <div id="authError" class="alert alert-danger py-1 px-2 small mb-3"
+                        style="display: none; font-size: 0.75rem;"></div>
+
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-primary btn-sm" type="button" id="authSubmitBtn">Login</button>
+                        <button class="btn btn-outline-light btn-sm" type="button" id="googleAuthBtn">
+                            <i class="bi bi-google me-1"></i> Sign in with Google
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="drawing-manager.js"></script>
     <script type="module">
+
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
         import {
             getFirestore,
             doc,
@@ -464,10 +535,35 @@
 
         // UI Elements
         const loginBtn = document.getElementById('loginBtn');
+        const userProfileDropdown = document.getElementById('userProfileDropdown');
+        const currentUserEmail = document.getElementById('currentUserEmail');
+        const userProBadge = document.getElementById('userProBadge');
         const logoutBtn = document.getElementById('logoutBtn');
-        const userInfo = document.getElementById('userInfo');
-        const upgradeBtn = document.getElementById('upgradeBtn');
+        const upgradeBtn = document.getElementById('upgradeBtn'); // Kept for logic, though button moved/removed in HTML? 
+        // Wait, I removed upgradeBtn from HTML above. 
+        // Let's add it back into the dropdown or keep it separate? 
+        // Plan said "Status" in dropdown. Let's stick to that.
+
         const btnSubscribe = document.getElementById('btnSubscribe');
+
+        // Auth Modal Elements
+        const authModalEl = document.getElementById('authModal');
+        const authModal = new bootstrap.Modal(authModalEl);
+        const authEmail = document.getElementById('authEmail');
+        const authPassword = document.getElementById('authPassword');
+        const authSubmitBtn = document.getElementById('authSubmitBtn');
+        const googleAuthBtn = document.getElementById('googleAuthBtn');
+        const authError = document.getElementById('authError');
+        const authModalTitle = document.getElementById('authModalTitle');
+
+        let isLoginMode = true;
+
+        window.toggleAuthMode = (mode) => {
+            isLoginMode = mode === 'login';
+            authModalTitle.textContent = isLoginMode ? 'Login' : 'Register';
+            authSubmitBtn.textContent = isLoginMode ? 'Login' : 'Register';
+            authError.style.display = 'none';
+        };
 
         // 全域變數存 Price ID
         let currentPriceId = null;
@@ -477,10 +573,10 @@
             if (user) {
                 // 已登入
                 if (loginBtn) loginBtn.style.display = 'none';
-                if (logoutBtn) logoutBtn.style.display = 'inline-block';
-                if (userInfo) {
-                    userInfo.style.display = 'inline-block';
-                    userInfo.textContent = `User: ${user.email}`;
+                if (userProfileDropdown) userProfileDropdown.style.display = 'block';
+
+                if (currentUserEmail) {
+                    currentUserEmail.textContent = user.email;
                 }
 
                 // 1. 檢查是否已經訂閱 (檢查 users/{uid}/subscriptions 子集合)
@@ -495,9 +591,8 @@
             } else {
                 // 未登入
                 if (loginBtn) loginBtn.style.display = 'inline-block';
-                if (logoutBtn) logoutBtn.style.display = 'none';
-                if (userInfo) userInfo.style.display = 'none';
-                if (upgradeBtn) upgradeBtn.style.display = 'none';
+                if (userProfileDropdown) userProfileDropdown.style.display = 'none';
+
                 window.currentUser = null;
             }
         });
@@ -511,18 +606,21 @@
 
             if (!snapshot.empty) {
                 // 是 Pro 用戶
-                if (userInfo) {
-                    userInfo.textContent = `👑 Pro: ${auth.currentUser.email}`;
-                    userInfo.classList.add('text-warning');
+                if (userProBadge) {
+                    userProBadge.textContent = "PRO";
+                    userProBadge.classList.replace('bg-secondary', 'bg-warning');
+                    userProBadge.classList.add('text-dark');
                 }
-                if (upgradeBtn) upgradeBtn.style.display = 'none'; // 已經是會員就不顯示升級鈕
 
                 // 解鎖 App 功能
                 if (window.app) window.app.isProMember = true;
             } else {
                 // 免費 用戶
-                if (userInfo) userInfo.classList.remove('text-warning');
-                if (upgradeBtn) upgradeBtn.style.display = 'inline-block'; // 顯示升級鈕
+                if (userProBadge) {
+                    userProBadge.textContent = "Free";
+                    userProBadge.classList.replace('bg-warning', 'bg-secondary');
+                    userProBadge.classList.remove('text-dark');
+                }
                 if (window.app) window.app.isProMember = false;
             }
         }
@@ -607,7 +705,50 @@
         }
 
         // 登入登出按鈕事件
-        if (loginBtn) loginBtn.addEventListener('click', () => signInWithPopup(auth, provider));
+        // if (loginBtn) loginBtn.addEventListener('click', () => signInWithPopup(auth, provider)); // OLD
+        if (loginBtn) {
+            loginBtn.addEventListener('click', () => {
+                authModal.show();
+            });
+        }
+
+        if (logoutBtn) logoutBtn.addEventListener('click', () => signOut(auth).then(() => window.location.reload()));
+
+        // auth 處理函式
+        async function handleAuth() {
+            const email = authEmail.value;
+            const password = authPassword.value;
+            authError.style.display = 'none';
+            authError.textContent = '';
+
+            try {
+                if (isLoginMode) {
+                    await signInWithEmailAndPassword(auth, email, password);
+                } else {
+                    await createUserWithEmailAndPassword(auth, email, password);
+                }
+                authModal.hide();
+            } catch (error) {
+                authError.innerText = error.message;
+                authError.style.display = 'block';
+            }
+        }
+
+        if (authSubmitBtn) {
+            authSubmitBtn.addEventListener('click', handleAuth);
+        }
+
+        if (googleAuthBtn) {
+            googleAuthBtn.addEventListener('click', async () => {
+                try {
+                    await signInWithPopup(auth, provider);
+                    authModal.hide();
+                } catch (error) {
+                    authError.innerText = error.message;
+                    authError.style.display = 'block';
+                }
+            });
+        }
         if (logoutBtn) logoutBtn.addEventListener('click', () => signOut(auth).then(() => window.location.reload()));
     </script>
 
