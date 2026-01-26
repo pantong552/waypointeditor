@@ -51,6 +51,17 @@
                     class="bi bi-keyboard"></i></button>
 
             <div class="vr mx-1 bg-secondary"></div>
+            <!-- Restored: Upgrade Button (Visible only to Free users) -->
+            <button id="upgradeBtn" class="btn btn-warning btn-xs ms-2 fw-bold" style="display:none;"
+                data-bs-toggle="modal" data-bs-target="#proModal">
+                UPGRADE
+            </button>
+
+            <!-- Restored: Login Button (Visible only when logged out) -->
+            <button id="loginBtn" class="btn btn-outline-info btn-xs ms-2" title="Login / Register">
+                <i class="bi bi-person-circle"></i> Login
+            </button>
+
             <!-- User Profile Dropdown (Initially Hidden) -->
             <div class="dropdown ms-2" id="userProfileDropdown" style="display: none;">
                 <button
@@ -611,6 +622,7 @@
                     userProBadge.classList.replace('bg-secondary', 'bg-warning');
                     userProBadge.classList.add('text-dark');
                 }
+                if (upgradeBtn) upgradeBtn.style.display = 'none'; // 已經是會員就不顯示升級鈕
 
                 // 解鎖 App 功能
                 if (window.app) window.app.isProMember = true;
@@ -621,6 +633,8 @@
                     userProBadge.classList.replace('bg-warning', 'bg-secondary');
                     userProBadge.classList.remove('text-dark');
                 }
+                if (upgradeBtn) upgradeBtn.style.display = 'inline-block'; // 顯示升級鈕
+
                 if (window.app) window.app.isProMember = false;
             }
         }
