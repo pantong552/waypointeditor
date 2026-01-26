@@ -49,6 +49,19 @@
             <button id="resetBtn" class="btn btn-danger btn-xs" title="Reset All"><i class="bi bi-trash"></i></button>
             <button id="helpBtn" class="btn btn-secondary btn-xs" title="Shortcuts"><i
                     class="bi bi-keyboard"></i></button>
+
+            <div class="vr mx-1 bg-secondary"></div>
+            <span id="userInfo" class="text-light small me-2" style="display: none;"></span>
+            <button id="upgradeBtn" class="btn btn-warning btn-xs ms-2 fw-bold" style="display:none;"
+                data-bs-toggle="modal" data-bs-target="#proModal">
+                UPGRADE
+            </button>
+            <button id="loginBtn" class="btn btn-outline-info btn-xs" title="Google Login">
+                <i class="bi bi-google"></i> Login
+            </button>
+            <button id="logoutBtn" class="btn btn-outline-secondary btn-xs" title="Logout" style="display: none;">
+                Logout
+            </button>
         </div>
     </div>
 
@@ -387,6 +400,29 @@
     </div>
 
     <script src="lib/leaflet/leaflet-src.js"></script>
+
+    <div class="modal fade" id="proModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content bg-dark text-light border-secondary">
+                <div class="modal-header border-secondary">
+                    <h5 class="modal-title"><i class="bi bi-star-fill text-warning me-2"></i>Upgrade to Pro</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body text-center">
+                    <h3 id="planName">Loading...</h3>
+                    <p id="planDesc" class="text-secondary">Please wait...</p>
+                    <h2 id="planPrice" class="text-info my-3"></h2>
+
+                    <div class="d-grid gap-2 mt-4">
+                        <button id="btnSubscribe" class="btn btn-primary btn-lg" disabled>
+                            Subscribe Now
+                        </button>
+                    </div>
+                    <small class="text-muted mt-2 d-block">Secured by Stripe</small>
+                </div>
+            </div>
+        </div>
+    </div>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
     <script src="history.js"></script>
@@ -395,6 +431,186 @@
     <script src="waypoint-popup.js"></script>
     <script src="message-box.js"></script>
     <script src="drawing-manager.js"></script>
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import {
+            getFirestore,
+            doc,
+            getDoc,
+            getDocs,
+            collection,
+            query,
+            where,
+            addDoc,
+            onSnapshot
+        } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        // 1. Firebase Config
+        const firebaseConfig = {
+            apiKey: "AIzaSyAVdsKvhztwtyv_QetEoz1nAXUejE80Sbw",
+            authDomain: "waypointeditor-1238f.firebaseapp.com",
+            projectId: "waypointeditor-1238f",
+            storageBucket: "waypointeditor-1238f.firebasestorage.app",
+            messagingSenderId: "135089930451",
+            appId: "1:135089930451:web:5069920acadf6e5c695426",
+            measurementId: "G-079FSLL95C"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const provider = new GoogleAuthProvider();
+
+        // UI Elements
+        const loginBtn = document.getElementById('loginBtn');
+        const logoutBtn = document.getElementById('logoutBtn');
+        const userInfo = document.getElementById('userInfo');
+        const upgradeBtn = document.getElementById('upgradeBtn');
+        const btnSubscribe = document.getElementById('btnSubscribe');
+
+        // 全域變數存 Price ID
+        let currentPriceId = null;
+
+        // --- A. 登入與權限檢查邏輯 ---
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                // 已登入
+                if (loginBtn) loginBtn.style.display = 'none';
+                if (logoutBtn) logoutBtn.style.display = 'inline-block';
+                if (userInfo) {
+                    userInfo.style.display = 'inline-block';
+                    userInfo.textContent = `User: ${user.email}`;
+                }
+
+                // 1. 檢查是否已經訂閱 (檢查 users/{uid}/subscriptions 子集合)
+                checkSubscriptionStatus(user.uid);
+
+                // 2. 預先載入產品資訊給 Modal 用
+                loadProductInfo();
+
+                // 將使用者資訊掛載到全域變數
+                window.currentUser = user;
+
+            } else {
+                // 未登入
+                if (loginBtn) loginBtn.style.display = 'inline-block';
+                if (logoutBtn) logoutBtn.style.display = 'none';
+                if (userInfo) userInfo.style.display = 'none';
+                if (upgradeBtn) upgradeBtn.style.display = 'none';
+                window.currentUser = null;
+            }
+        });
+
+        // 檢查訂閱狀態 (Extension 會把資料寫入 subscriptions 子集合)
+        async function checkSubscriptionStatus(uid) {
+            const subRef = collection(db, "users", uid, "subscriptions");
+            // 找尋狀態為 active 或 trialing 的訂閱
+            const q = query(subRef, where("status", "in", ["active", "trialing"]));
+            const snapshot = await getDocs(q);
+
+            if (!snapshot.empty) {
+                // 是 Pro 用戶
+                if (userInfo) {
+                    userInfo.textContent = `👑 Pro: ${auth.currentUser.email}`;
+                    userInfo.classList.add('text-warning');
+                }
+                if (upgradeBtn) upgradeBtn.style.display = 'none'; // 已經是會員就不顯示升級鈕
+
+                // 解鎖 App 功能
+                if (window.app) window.app.isProMember = true;
+            } else {
+                // 免費 用戶
+                if (userInfo) userInfo.classList.remove('text-warning');
+                if (upgradeBtn) upgradeBtn.style.display = 'inline-block'; // 顯示升級鈕
+                if (window.app) window.app.isProMember = false;
+            }
+        }
+
+        // --- B. 讀取產品資訊 (顯示在 Modal) ---
+        async function loadProductInfo() {
+            // 讀取 products 集合中 active: true 的產品
+            const q = query(collection(db, "products"), where("active", "==", true));
+            const querySnapshot = await getDocs(q);
+
+            querySnapshot.forEach(async (doc) => {
+                const product = doc.data();
+                // 填寫 UI
+                const planName = document.getElementById('planName');
+                const planDesc = document.getElementById('planDesc');
+                if (planName) planName.textContent = product.name;
+                if (planDesc) planDesc.textContent = product.description;
+
+                // 讀取這個產品底下的 prices 子集合
+                const priceSnap = await getDocs(collection(db, "products", doc.id, "prices"));
+                priceSnap.forEach((priceDoc) => {
+                    const price = priceDoc.data();
+                    // 找到一個有效的價格
+                    if (price.active) {
+                        currentPriceId = priceDoc.id; // 記下 Price ID 供結帳用
+                        const amount = (price.unit_amount / 100).toFixed(0); // Stripe 金額是「分」，要除以 100
+                        const currency = price.currency.toUpperCase();
+                        const planPrice = document.getElementById('planPrice');
+                        if (planPrice) planPrice.textContent = `${currency} $${amount} / month`;
+
+                        // 啟用按鈕
+                        if (btnSubscribe) btnSubscribe.disabled = false;
+                    }
+                });
+            });
+        }
+
+        // --- C. 觸發結帳 (核心功能) ---
+        if (btnSubscribe) {
+            btnSubscribe.addEventListener('click', async () => {
+                if (!auth.currentUser) return;
+                if (!currentPriceId) {
+                    alert("Error: No price ID found");
+                    return;
+                }
+
+                btnSubscribe.textContent = "Redirecting...";
+                btnSubscribe.disabled = true;
+
+                // 1. 在 users/{uid}/checkout_sessions 建立新文件
+                // 這是告訴 Firebase Extension：「我要結帳！」
+                try {
+                    const sessionRef = await addDoc(collection(db, "users", auth.currentUser.uid, "checkout_sessions"), {
+                        price: currentPriceId,
+                        success_url: window.location.href, // 付款成功後跳轉回原頁面
+                        cancel_url: window.location.href,  // 取消付款也跳回原頁面
+                    });
+
+                    // 2. 監聽這個文件，等待 Extension 回傳 Stripe 的付款網址 (url)
+                    onSnapshot(sessionRef, (snap) => {
+                        const data = snap.data();
+                        if (!data) return;
+                        const { error, url } = data;
+                        if (error) {
+                            // 發生錯誤
+                            alert(`An error occurred: ${error.message}`);
+                            btnSubscribe.textContent = "Subscribe Now";
+                            btnSubscribe.disabled = false;
+                        }
+                        if (url) {
+                            // 3. 拿到網址，跳轉去 Stripe
+                            window.location.assign(url);
+                        }
+                    });
+                } catch (e) {
+                    console.error("Checkout Error:", e);
+                    alert("Checkout failed: " + e.message);
+                    btnSubscribe.textContent = "Subscribe Now";
+                    btnSubscribe.disabled = false;
+                }
+            });
+        }
+
+        // 登入登出按鈕事件
+        if (loginBtn) loginBtn.addEventListener('click', () => signInWithPopup(auth, provider));
+        if (logoutBtn) logoutBtn.addEventListener('click', () => signOut(auth).then(() => window.location.reload()));
+    </script>
+
     <script src="app.js"></script>
 </body>
 
