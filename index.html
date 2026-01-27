@@ -218,54 +218,205 @@
         </div>
     </section>
 
-    <!-- Features Section -->
-    <section class="section-padding bg-dark">
+    <!-- Features Section - Redesigned -->
+    <section class="section-padding" style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);">
         <div class="container">
             <div class="text-center mb-5">
-                <h2 class="fw-bold text-white">Why Waypoint?</h2>
-                <p class="text-muted">Designed for efficiency and precision.</p>
+                <h2 class="fw-bold text-white display-5 mb-3">
+                    <span class="text-gradient">為什麼選擇 WaypointEditor？</span>
+                </h2>
+                <p class="lead text-white-50 mb-0">專為效率與精準度而設計的專業無人機任務規劃工具</p>
             </div>
+
             <div class="row g-4">
+                <!-- Feature 1: Auto-Calc -->
                 <div class="col-md-4">
-                    <div class="feature-card">
-                        <div class="feature-icon">
+                    <div class="feature-card-modern">
+                        <div class="feature-card-glow"
+                            style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);"></div>
+                        <div class="feature-icon-modern"
+                            style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
                             <i class="bi bi-calculator-fill"></i>
                         </div>
-                        <h4 class="text-white mb-3">Auto-Calc Photogrammetry</h4>
-                        <p class="text-muted">
-                            Simply define your area. We automatically calculate optimal flight paths based on your
-                            camera
-                            parameters, GSD, and overlap requirements.
+                        <h4 class="text-white mb-3 fw-bold">自動計算航攝參數</h4>
+                        <p class="text-white-50 mb-4">
+                            只需定義測量區域，系統會根據相機參數、GSD 和重疊率自動計算最佳飛行路徑。
                         </p>
+                        <ul class="feature-list">
+                            <li><i class="bi bi-check-circle-fill text-success me-2"></i>智能 GSD 計算</li>
+                            <li><i class="bi bi-check-circle-fill text-success me-2"></i>自動重疊率優化</li>
+                            <li><i class="bi bi-check-circle-fill text-success me-2"></i>即時路徑及拍照範圍預覽</li>
+                        </ul>
                     </div>
                 </div>
+
+                <!-- Feature 2: KMZ Export -->
                 <div class="col-md-4">
-                    <div class="feature-card">
-                        <div class="feature-icon">
+                    <div class="feature-card-modern">
+                        <div class="feature-card-glow"
+                            style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);"></div>
+                        <div class="feature-icon-modern"
+                            style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
                             <i class="bi bi-file-earmark-code-fill"></i>
                         </div>
-                        <h4 class="text-white mb-3">Native KMZ Export</h4>
-                        <p class="text-muted">
-                            Seamlessly export your mission plans to DJI Pilot 2 compatible KMZ files. No complex
-                            conversions needed.
+                        <h4 class="text-white mb-3 fw-bold">原生 KMZ 匯出</h4>
+                        <p class="text-white-50 mb-4">
+                            無縫匯出任務計劃至 DJI FLY 相容的 KMZ 檔案，無需複雜轉換。
                         </p>
+                        <ul class="feature-list">
+                            <li><i class="bi bi-check-circle-fill text-success me-2"></i>一鍵匯出 KMZ</li>
+                            <li><i class="bi bi-check-circle-fill text-success me-2"></i>DJI PFLY 完全相容</li>
+                        </ul>
                     </div>
                 </div>
+
+                <!-- Feature 3: Advanced Path -->
                 <div class="col-md-4">
-                    <div class="feature-card">
-                        <div class="feature-icon">
+                    <div class="feature-card-modern">
+                        <div class="feature-card-glow"
+                            style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);"></div>
+                        <div class="feature-icon-modern"
+                            style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
                             <i class="bi bi-bezier2"></i>
                         </div>
-                        <h4 class="text-white mb-3">Advanced Path Logic</h4>
-                        <p class="text-muted">
-                            Intelligent path generation minimizes flight time while ensuring full coverage. Supports
-                            custom turn modes and speed adjustments.
+                        <h4 class="text-white mb-3 fw-bold">進階路徑邏輯</h4>
+                        <p class="text-white-50 mb-4">
+                            智能路徑生成最小化飛行時間，同時確保完整覆蓋。支援自訂轉彎模式和速度調整。
                         </p>
+                        <ul class="feature-list">
+                            <li><i class="bi bi-check-circle-fill text-success me-2"></i>最短路徑優化</li>
+                            <li><i class="bi bi-check-circle-fill text-success me-2"></i>多種轉彎模式</li>
+                            <li><i class="bi bi-check-circle-fill text-success me-2"></i>地形跟隨支援</li>
+                        </ul>
                     </div>
                 </div>
             </div>
-        </div>
+
+            <!-- Stats Row -->
+            <div class="row mt-5 pt-4 border-top border-secondary">
+                <div class="col-md-3 col-6 text-center mb-4">
+                    <div class="stat-number text-gradient">100%</div>
+                    <div class="stat-label text-white-50">香港製造</div>
+                </div>
+                <div class="col-md-3 col-6 text-center mb-4">
+                    <div class="stat-number text-gradient">
+                        < 1s</div>
+                            <div class="stat-label text-white-50">路徑計算</div>
+                    </div>
+                    <div class="col-md-3 col-6 text-center mb-4">
+                        <div class="stat-number text-gradient">10+</div>
+                        <div class="stat-label text-white-50">支援機型</div>
+                    </div>
+                    <div class="col-md-3 col-6 text-center mb-4">
+                        <div class="stat-number text-gradient">24/7</div>
+                        <div class="stat-label text-white-50">雲端運算</div>
+                    </div>
+                </div>
+            </div>
     </section>
+
+    <style>
+        .text-gradient {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .feature-card-modern {
+            position: relative;
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 2.5rem;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            overflow: hidden;
+            height: 100%;
+        }
+
+        .feature-card-modern:hover {
+            transform: translateY(-10px);
+            border-color: rgba(255, 255, 255, 0.3);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+        }
+
+        .feature-card-glow {
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            opacity: 0;
+            transition: opacity 0.4s;
+            filter: blur(40px);
+            z-index: 0;
+        }
+
+        .feature-card-modern:hover .feature-card-glow {
+            opacity: 0.15;
+        }
+
+        .feature-icon-modern {
+            width: 80px;
+            height: 80px;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 1.5rem;
+            position: relative;
+            z-index: 1;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .feature-icon-modern i {
+            font-size: 2.5rem;
+            color: white;
+        }
+
+        .feature-card-modern h4,
+        .feature-card-modern p,
+        .feature-card-modern ul {
+            position: relative;
+            z-index: 1;
+        }
+
+        .feature-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .feature-list li {
+            color: rgba(255, 255, 255, 0.9);
+            padding: 0.5rem 0;
+            font-size: 0.95rem;
+        }
+
+        .stat-number {
+            font-size: 3rem;
+            font-weight: 800;
+            line-height: 1;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        @media (max-width: 768px) {
+            .feature-card-modern {
+                padding: 2rem;
+            }
+
+            .stat-number {
+                font-size: 2rem;
+            }
+        }
+    </style>
 
     <!-- Global Footer -->
     <footer class="global-footer">
