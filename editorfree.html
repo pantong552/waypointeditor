@@ -537,55 +537,7 @@
     </div>
 
     <!-- Member Profile Modal -->
-    <div class="modal fade" id="profileModal" tabindex="-1">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content bg-dark text-light border-secondary">
-                <div class="modal-header border-secondary">
-                    <h5 class="modal-title"><i class="bi bi-person-badge-fill me-2"></i>My Profile</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <!-- Account Info -->
-                    <div class="mb-4">
-                        <h6 class="text-uppercase text-secondary small fw-bold mb-3">Account Information</h6>
-                        <div class="mb-3">
-                            <label class="form-label-xs">Email Address</label>
-                            <input type="email" id="profileEmail"
-                                class="form-control bg-dark text-light border-secondary" readonly>
-                        </div>
-                        <div class="d-flex justify-content-between align-items-center">
-                            <label class="form-label-xs mb-0">Password</label>
-                            <button class="btn btn-outline-secondary btn-sm" id="btnResetPassword">
-                                <i class="bi bi-key me-1"></i> Reset Password
-                            </button>
-                        </div>
-                    </div>
 
-                    <hr class="border-secondary opacity-50">
-
-                    <!-- Subscription Info -->
-                    <div>
-                        <h6 class="text-uppercase text-secondary small fw-bold mb-3">Subscription Plan</h6>
-
-                        <div class="d-flex align-items-center mb-3">
-                            <span class="badge bg-secondary rounded-pill me-2" id="profilePlanBadge"
-                                style="font-size: 0.9rem;">Free</span>
-                            <span class="text-muted small" id="profileExpiryDate">No active subscription</span>
-                        </div>
-
-                        <div class="d-grid">
-                            <button class="btn btn-outline-primary" id="btnManageSubscription">
-                                <i class="bi bi-credit-card-2-front me-2"></i> Manage Subscription
-                            </button>
-                        </div>
-                        <small class="text-muted d-block text-center mt-2" style="font-size: 0.75rem;">
-                            Redirects to Stripe Customer Portal
-                        </small>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
 
     <script src="drawing-manager.js"></script>
     <script type="module">
@@ -603,6 +555,8 @@
             addDoc,
             onSnapshot
         } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-functions.js";
+        import { ProfileManager } from "./scripts/profile-manager.js";
 
         // 1. Firebase Config
         const firebaseConfig = {
@@ -618,6 +572,7 @@
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
+        const functions = getFunctions(app, 'asia-east2'); // Stripe Extension Region
         const provider = new GoogleAuthProvider();
 
         // UI Elements
@@ -844,153 +799,15 @@
         if (logoutBtn) logoutBtn.addEventListener('click', () => signOut(auth).then(() => window.location.reload()));
 
 
-        // Create Function to Open Profile and Attach Listener
-        const openProfileModal = async () => {
-            if (!auth.currentUser) return;
+        // Initialize ProfileManager
+        const profileManager = new ProfileManager(auth, db, functions);
+        profileManager.init();
 
-            // 1. Fill basic info
-            document.getElementById('profileEmail').value = auth.currentUser.email;
-
-            // 2. Refresh subscription info in UI (already fetched by checkSubscriptionStatus, but let's re-fetch or use state)
-            // Ideally we should cache the subscription doc content, but for now we can re-fetch for fresh data
-            // Or simpler: checkSubscriptionStatus updates global UI, we can just rely on what we have or do a quick check
-            // Let's do a fresh fetch to get the 'current_period_end' which we didn't store globally before
-
-            const btnManage = document.getElementById('btnManageSubscription');
-            const expiryText = document.getElementById('profileExpiryDate');
-            const planBadge = document.getElementById('profilePlanBadge');
-
-            btnManage.disabled = true;
-            btnManage.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Loading...';
-
-            try {
-                const subRef = collection(db, "users", auth.currentUser.uid, "subscriptions");
-                const q = query(subRef, where("status", "in", ["active", "trialing"]));
-                const snapshot = await getDocs(q);
-
-                if (!snapshot.empty) {
-                    // Is Pro
-                    const subDoc = snapshot.docs[0].data();
-                    planBadge.textContent = "PRO";
-                    planBadge.className = "badge bg-warning text-dark rounded-pill me-2";
-
-                    if (subDoc.current_period_end) {
-                        const date = subDoc.current_period_end.toDate(); // Firestore Timestamp to Date
-                        expiryText.textContent = `Renews on ${date.toLocaleDateString()}`;
-                    } else {
-                        expiryText.textContent = "Active";
-                    }
-                } else {
-                    // Is Free
-                    planBadge.textContent = "Free";
-                    planBadge.className = "badge bg-secondary rounded-pill me-2";
-                    expiryText.textContent = "No active subscription";
-                }
-            } catch (error) {
-                console.error("Error fetching sub details:", error);
-                expiryText.textContent = "Error loading info";
-            } finally {
-                btnManage.disabled = false;
-                btnManage.innerHTML = '<i class="bi bi-credit-card-2-front me-2"></i> Manage Subscription';
-            }
-
-            const profileModal = new bootstrap.Modal(document.getElementById('profileModal'));
-            profileModal.show();
-        };
-
+        // Attach to UI button
         const btnOpenProfile = document.getElementById('btnOpenProfile');
         if (btnOpenProfile) {
-            btnOpenProfile.addEventListener('click', openProfileModal);
+            btnOpenProfile.addEventListener('click', () => window.openProfileModal());
         }
-
-        // --- Profile Actions --- //
-
-        // 1. Reset Password
-        document.getElementById('btnResetPassword').addEventListener('click', async () => {
-            const btn = document.getElementById('btnResetPassword');
-            const originalText = btn.innerHTML;
-            const email = auth.currentUser.email;
-
-            if (!confirm(`Send password reset email to ${email}?`)) return;
-
-            btn.disabled = true;
-            btn.textContent = "Sending...";
-
-            try {
-                await sendPasswordResetEmail(auth, email);
-                alert(`Password reset email sent to ${email}. Please check your inbox.`);
-                btn.textContent = "Sent!";
-            } catch (error) {
-                console.error(error);
-                alert("Error: " + error.message);
-                btn.innerHTML = originalText;
-                btn.disabled = false;
-            }
-
-            // Reset button after a few seconds
-            setTimeout(() => {
-                btn.innerHTML = originalText;
-                btn.disabled = false;
-            }, 5000);
-        });
-
-        // 2. Manage Subscription (Stripe Portal)
-        document.getElementById('btnManageSubscription').addEventListener('click', async () => {
-            const btn = document.getElementById('btnManageSubscription');
-            const originalText = btn.innerHTML;
-
-            btn.disabled = true;
-            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Redirecting...';
-
-            try {
-                // Determine which collection to use.
-                // Standard Firebase Stripe Extension uses 'customers/{uid}/portal_sessions' usually inside the user doc
-                // But the official extension often uses: users/{uid}/portal_sessions (if users is the customers collection)
-
-                // Check if user has a stripeId
-                const userDocRef = doc(db, "users", auth.currentUser.uid);
-                const userSnap = await getDoc(userDocRef);
-                const userData = userSnap.data();
-
-                if (!userData || !userData.stripeId) {
-                    console.error("[Portal] No stripeId found for user:", auth.currentUser.uid);
-                    alert("No active Stripe account found. Please subscribe first.");
-                    btn.innerHTML = originalText;
-                    btn.disabled = false;
-                    return;
-                }
-
-                // Let's try creating a doc in users/{uid}/portal_sessions
-                const sessionRef = await addDoc(collection(db, "users", auth.currentUser.uid, "portal_sessions"), {
-                    return_url: window.location.href,
-                });
-
-                // Listen for status
-                onSnapshot(sessionRef, (snap) => {
-                    const data = snap.data();
-                    console.log("[Portal] Snapshot update:", data); // Debug Log
-
-                    if (!data) return;
-                    const { error, url } = data;
-                    if (error) {
-                        console.error("[Portal] Error from extension:", error);
-                        alert(`An error occurred: ${error.message}`);
-                        btn.innerHTML = originalText;
-                        btn.disabled = false;
-                    }
-                    if (url) {
-                        console.log("[Portal] Redirecting to:", url);
-                        window.location.assign(url);
-                    }
-                });
-
-            } catch (error) {
-                console.error("Portal Error:", error);
-                alert("Failed to redirect to portal: " + error.message);
-                btn.innerHTML = originalText;
-                btn.disabled = false;
-            }
-        });
 
     </script>
     <script src="scripts/calculator.js"></script>
