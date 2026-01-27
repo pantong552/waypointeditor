@@ -1,6 +1,6 @@
 /**
- * Waypoint Calculator - Backend Version
- * Synced from scripts/calculator.js
+ * Waypoint Calculator - Client Side Version
+ * Ported from Waypoint-API/lib/calculator.js
  */
 class WaypointCalculator {
     constructor() { }
@@ -180,4 +180,5 @@ class WaypointCalculator {
     }
 }
 
-module.exports = WaypointCalculator;
+// Make it available globally if needed (though class def does that)
+window.WaypointCalculator = WaypointCalculator;

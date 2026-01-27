@@ -1,0 +1,30 @@
+/* auth-styles.css */
+
+/* Profile Dropdown Customization */
+.user-avatar-placeholder {
+    width: 24px;
+    height: 24px;
+    font-size: 12px;
+}
+
+/* Ensure text in dropdown button doesn't overflow */
+#currentUserEmail {
+    max-width: 150px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Adjust dropdown menu font size */
+.dropdown-menu {
+    font-size: 0.9rem;
+}
+
+/* Header Badge Adjustment */
+.badge-status {
+    font-size: 0.7em;
+}
+
+.auth-btn-gap {
+    margin-left: 0.5rem; /* ms-2 equivalent */
+}

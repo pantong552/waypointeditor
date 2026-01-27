@@ -471,6 +471,16 @@ class WaypointMapApp {
      */
     async generateFromAdvanced() {
         this.updateSettingsFromForm();
+
+        // [Free Version Restriction]
+        if (window.isFreeVersion) {
+            console.log('[App] Free Version: Enforcing restrictions');
+            // Force interval to be huge so no intermediate points are generated
+            this.settings.interval = 100000;
+            // Force Turn Mode to default
+            this.settings.turnMode = 'toPointAndStopWithContinuityCurvature';
+        }
+
         await this.generateWaypoints();
     }
 
@@ -691,14 +701,20 @@ class WaypointMapApp {
         return totalDist;
     }
 
-    /**
-     * Internal method to generate grid waypoints for a specific direction
-     */
-    // --- Helpers for Omnidirectional Calculation ---
+    async generateFromAdvanced() {
+        this.updateSettingsFromForm();
 
+        // [Free Version Restriction]
+        if (window.isFreeVersion) {
+            console.log('[App] Free Version: Enforcing restrictions');
+            // Force settings for Free Version
+            this.settings.turnMode = 'toPointAndStopWithContinuityCurvature';
+            // Note: We do NOT force large interval here anymore. 
+            // We generate full points and filter them later.
+        }
 
-
-
+        await this.generateWaypoints();
+    }
 
     /**
      * Helper to approximate a circle as a polygon
@@ -726,12 +742,9 @@ class WaypointMapApp {
     }
 
     /**
-     * Generate waypoints for a shape using external API
+     * Generate waypoints for a shape using external API or Local Calculator
      */
     async generateWaypointsForShape(layer, shapeType) {
-        // [Modified] Use Vercel API
-        const API_URL = 'https://waypoint-api-rho.vercel.app/';
-
         const bounds = this.getShapeBounds(layer);
         if (bounds.minLat > bounds.maxLat || bounds.minLng > bounds.maxLng) return [];
 
@@ -739,16 +752,9 @@ class WaypointMapApp {
         let coordinates = [];
         if (typeof layer.getLatLngs === 'function') {
             const latlngs = layer.getLatLngs();
-            // Leaflet Polygon can be nested [[{lat, lng}, ...]] or [{lat, lng}, ...]
-            // We flatten one level if needed or handle in API, but let's standardize here
-            if (Array.isArray(latlngs[0]) && typeof latlngs[0][0] !== 'number') {
-                // It's a MultiPolygon or Polygon with holes, take outer ring for now
-                coordinates = latlngs[0];
-            } else {
-                coordinates = latlngs;
-            }
+            const ring = Array.isArray(latlngs[0]) ? latlngs[0] : latlngs;
+            coordinates = ring.map(ll => ({ lat: ll.lat, lng: ll.lng }));
         } else if (typeof layer.getLatLng === 'function' && typeof layer.getRadius === 'function') {
-            // Circle - Approximate as Polygon
             coordinates = this.getCirclePolygonCoordinates(layer);
         }
 
@@ -761,23 +767,73 @@ class WaypointMapApp {
             angle: this.settings.angle
         };
 
-        try {
-            const response = await fetch(API_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ coordinates, settings })
-            });
+        let generatedPoints = [];
 
-            if (!response.ok) {
-                throw new Error(`API Error: ${response.statusText}`);
+        try {
+            // Check if we should use Local Calculator (localhost or file protocol)
+            const isLocal = window.location.hostname === 'localhost' ||
+                window.location.hostname === '127.0.0.1' ||
+                window.location.protocol === 'file:';
+
+            if (isLocal && window.WaypointCalculator) {
+                console.log('[App] Using Local Calculator (Offline Mode)');
+                const calculator = new window.WaypointCalculator();
+                generatedPoints = calculator.generateWaypoints(coordinates, settings);
+            } else {
+                // Use Remote API
+                const API_URL = 'https://waypoint-api-rho.vercel.app/'; // Or your deployed API
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ coordinates, settings })
+                });
+
+                if (!response.ok) throw new Error(`API Error: ${response.statusText}`);
+                const data = await response.json();
+                generatedPoints = data.waypoints || [];
             }
 
-            const data = await response.json();
-            return data.waypoints || [];
+            // [Free Version Filter]
+            // Keep only turning points (Start of line, End of line)
+            // The calculator generates lines. We can detect turning points by checking heading changes,
+            // or simply by assuming the calculator output structure (it usually outputs lines).
+            // A robust way extracting turning points: index 0 and significant heading changes.
+            if (window.isFreeVersion && generatedPoints.length > 0) {
+                console.log(`[App] Free Version: Filtering ${generatedPoints.length} points to turning points only.`);
+                const filtered = [];
+
+                // Always keep first point
+                filtered.push(generatedPoints[0]);
+
+                for (let i = 1; i < generatedPoints.length - 1; i++) {
+                    const prev = generatedPoints[i - 1];
+                    const curr = generatedPoints[i];
+                    const next = generatedPoints[i + 1];
+
+                    // Calculate headings
+                    const h1 = this.calculateBearing(prev.lat, prev.lng, curr.lat, curr.lng);
+                    const h2 = this.calculateBearing(curr.lat, curr.lng, next.lat, next.lng);
+
+                    // If heading changes significantly (> 1 degree), it's a turn
+                    const diff = Math.abs(h1 - h2);
+                    if (diff > 1.0) {
+                        filtered.push(curr);
+                    }
+                }
+
+                // Always keep last point
+                if (generatedPoints.length > 1) {
+                    filtered.push(generatedPoints[generatedPoints.length - 1]);
+                }
+
+                generatedPoints = filtered;
+            }
+
+            return generatedPoints;
 
         } catch (error) {
-            console.error('Failed to generate waypoints via API:', error);
-            await MessageBox.alert('Failed to connect to calculation API. Please ensure the backend is running.', 'API Error');
+            console.error('Failed to generate waypoints:', error);
+            await MessageBox.alert('Failed to generate waypoints. ' + error.message, 'Generation Error');
             return [];
         }
     }
