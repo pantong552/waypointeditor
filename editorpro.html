@@ -23,8 +23,8 @@
         <div class="container-fluid d-flex justify-content-between align-items-center">
             <a href="index.html" class="brand-logo">
                 <i class="bi bi-airplane-engines-fill"></i>
-                WaypointMap <span class="badge bg-primary ms-2 fs-6 rounded-pill"
-                    style="font-size: 0.7rem !important; vertical-align: middle;">Editor</span>
+                WaypointEditor <span id="brandPlanBadge" class="badge bg-primary ms-2 fs-6 rounded-pill"
+                    style="font-size: 0.7rem !important; vertical-align: middle; display: none;">Free</span>
             </a>
             <nav class="d-none d-md-flex align-items-center gap-3">
                 <a href="index.html" class="nav-link-custom">Home</a>
@@ -59,19 +59,19 @@
                     <ul class="dropdown-menu dropdown-menu-end dropdown-menu-dark shadow border-secondary"
                         style="font-size: 0.9rem;">
                         <li>
+                            <h6 class="dropdown-header text-muted text-uppercase small" style="font-size: 0.7rem;">
+                                Account
+                            </h6>
+                        </li>
+                        <li>
                             <button class="dropdown-item d-flex align-items-center gap-2" type="button"
                                 id="btnOpenProfile">
                                 <i class="bi bi-person-badge"></i> My Profile
                             </button>
                         </li>
                         <li>
-                            <h6 class="dropdown-header text-muted text-uppercase small" style="font-size: 0.7rem;">
-                                Account
-                            </h6>
-                        </li>
-                        <li>
                             <span class="dropdown-item-text d-flex justify-content-between align-items-center">
-                                Status
+                                <span><i class="bi bi-stars me-2"></i>Plan</span>
                                 <span id="userProBadge" class="badge bg-secondary rounded-pill"
                                     style="font-size: 0.7em;">Free</span>
                             </span>
@@ -630,6 +630,14 @@
                     userProBadge.textContent = "PRO";
                     userProBadge.classList.replace('bg-secondary', 'bg-warning');
                     userProBadge.classList.add('text-dark');
+                }
+
+                // Update Brand Badge
+                const brandBadge = document.getElementById('brandPlanBadge');
+                if (brandBadge) {
+                    brandBadge.textContent = "Pro";
+                    brandBadge.className = "badge bg-warning text-dark ms-2 fs-6 rounded-pill";
+                    brandBadge.style.display = "inline-block";
                 }
                 if (upgradeBtn) upgradeBtn.style.display = 'none';
                 if (window.app) window.app.isProMember = true;
