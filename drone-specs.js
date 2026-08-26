@@ -130,6 +130,13 @@ const DJI_DRONES = {
         cameras: {
             'MINI4_W': { name: 'Wide (24mm)', sensorW: 9.6, sensorH: 7.2, focal: 6.72, resW: 8064, resH: 6048 }
         }
+    },
+    'MINI5PRO': {
+        name: 'Mavic 5 Pro',
+        enumValue: 68,
+        cameras: {
+            'HASS_WIDE': { name: 'Wide (24mm)', sensorW: 13.2, sensorH: 8.8, focal: 8.8, resW: 8192, resH: 6144 }
+        }
     }
 };
 
