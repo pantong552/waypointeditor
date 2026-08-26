@@ -132,10 +132,10 @@ const DJI_DRONES = {
         }
     },
     'MINI5PRO': {
-        name: 'Mavic 5 Pro',
+        name: 'Mini 5 Pro',
         enumValue: 68,
         cameras: {
-            'HASS_WIDE': { name: 'Wide (24mm)', sensorW: 13.2, sensorH: 8.8, focal: 8.8, resW: 8192, resH: 6144 }
+            'MINI5_W': { name: 'Wide (24mm)', sensorW: 13.2, sensorH: 8.8, focal: 8.8, resW: 8192, resH: 6144 }
         }
     }
 };
